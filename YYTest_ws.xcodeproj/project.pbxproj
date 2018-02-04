@@ -8,13 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		8A0252A72023679700994329 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252A62023679700994329 /* AppDelegate.m */; };
-		8A0252AA2023679700994329 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252A92023679700994329 /* ViewController.m */; };
 		8A0252AD2023679700994329 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8A0252AB2023679700994329 /* Main.storyboard */; };
 		8A0252AF2023679700994329 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A0252AE2023679700994329 /* Assets.xcassets */; };
 		8A0252B22023679700994329 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8A0252B02023679700994329 /* LaunchScreen.storyboard */; };
 		8A0252B52023679700994329 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252B42023679700994329 /* main.m */; };
 		8A0252BF2023679700994329 /* YYTest_wsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252BE2023679700994329 /* YYTest_wsTests.m */; };
 		8A0252CA2023679700994329 /* YYTest_wsUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252C92023679700994329 /* YYTest_wsUITests.m */; };
+		8A0252D92023680100994329 /* RootViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252D82023680100994329 /* RootViewController.m */; };
+		8A0252E120236ADF00994329 /* WSModelExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E020236ADF00994329 /* WSModelExample.m */; };
+		8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E520236E2800994329 /* NSObject+WSModel.m */; };
+		8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E82025AA5C00994329 /* WSClassInfo.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,8 +41,6 @@
 		8A0252A22023679700994329 /* YYTest_ws.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YYTest_ws.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A0252A52023679700994329 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		8A0252A62023679700994329 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		8A0252A82023679700994329 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		8A0252A92023679700994329 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		8A0252AC2023679700994329 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		8A0252AE2023679700994329 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8A0252B12023679700994329 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -51,6 +52,14 @@
 		8A0252C52023679700994329 /* YYTest_wsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YYTest_wsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A0252C92023679700994329 /* YYTest_wsUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = YYTest_wsUITests.m; sourceTree = "<group>"; };
 		8A0252CB2023679700994329 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8A0252D72023680100994329 /* RootViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RootViewController.h; sourceTree = "<group>"; };
+		8A0252D82023680100994329 /* RootViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RootViewController.m; sourceTree = "<group>"; };
+		8A0252DF20236ADF00994329 /* WSModelExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSModelExample.h; sourceTree = "<group>"; };
+		8A0252E020236ADF00994329 /* WSModelExample.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSModelExample.m; sourceTree = "<group>"; };
+		8A0252E420236E2800994329 /* NSObject+WSModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSObject+WSModel.h"; sourceTree = "<group>"; };
+		8A0252E520236E2800994329 /* NSObject+WSModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+WSModel.m"; sourceTree = "<group>"; };
+		8A0252E72025AA5C00994329 /* WSClassInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSClassInfo.h; sourceTree = "<group>"; };
+		8A0252E82025AA5C00994329 /* WSClassInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSClassInfo.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,13 +112,11 @@
 			children = (
 				8A0252A52023679700994329 /* AppDelegate.h */,
 				8A0252A62023679700994329 /* AppDelegate.m */,
-				8A0252A82023679700994329 /* ViewController.h */,
-				8A0252A92023679700994329 /* ViewController.m */,
-				8A0252AB2023679700994329 /* Main.storyboard */,
-				8A0252AE2023679700994329 /* Assets.xcassets */,
-				8A0252B02023679700994329 /* LaunchScreen.storyboard */,
-				8A0252B32023679700994329 /* Info.plist */,
-				8A0252B42023679700994329 /* main.m */,
+				8A0252D72023680100994329 /* RootViewController.h */,
+				8A0252D82023680100994329 /* RootViewController.m */,
+				8A0252E320236DFC00994329 /* WSKit */,
+				8A0252DA20236A6A00994329 /* Model */,
+				8A0252DB20236A7400994329 /* Other */,
 			);
 			path = YYTest_ws;
 			sourceTree = "<group>";
@@ -130,6 +137,38 @@
 				8A0252CB2023679700994329 /* Info.plist */,
 			);
 			path = YYTest_wsUITests;
+			sourceTree = "<group>";
+		};
+		8A0252DA20236A6A00994329 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				8A0252DF20236ADF00994329 /* WSModelExample.h */,
+				8A0252E020236ADF00994329 /* WSModelExample.m */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		8A0252DB20236A7400994329 /* Other */ = {
+			isa = PBXGroup;
+			children = (
+				8A0252AB2023679700994329 /* Main.storyboard */,
+				8A0252AE2023679700994329 /* Assets.xcassets */,
+				8A0252B02023679700994329 /* LaunchScreen.storyboard */,
+				8A0252B32023679700994329 /* Info.plist */,
+				8A0252B42023679700994329 /* main.m */,
+			);
+			path = Other;
+			sourceTree = "<group>";
+		};
+		8A0252E320236DFC00994329 /* WSKit */ = {
+			isa = PBXGroup;
+			children = (
+				8A0252E420236E2800994329 /* NSObject+WSModel.h */,
+				8A0252E520236E2800994329 /* NSObject+WSModel.m */,
+				8A0252E72025AA5C00994329 /* WSClassInfo.h */,
+				8A0252E82025AA5C00994329 /* WSClassInfo.m */,
+			);
+			path = WSKit;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -265,9 +304,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8A0252AA2023679700994329 /* ViewController.m in Sources */,
 				8A0252B52023679700994329 /* main.m in Sources */,
 				8A0252A72023679700994329 /* AppDelegate.m in Sources */,
+				8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */,
+				8A0252E120236ADF00994329 /* WSModelExample.m in Sources */,
+				8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */,
+				8A0252D92023680100994329 /* RootViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
