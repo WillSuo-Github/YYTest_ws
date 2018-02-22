@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:YYTest_ws.xcodeproj">
+      location = "self:/Users/greatlock/Desktop/learn/YYTest_ws/YYTest_ws.xcodeproj">
    </FileRef>
 </Workspace>
