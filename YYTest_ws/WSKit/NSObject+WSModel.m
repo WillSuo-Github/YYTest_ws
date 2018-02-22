@@ -672,7 +672,7 @@ static void ModelSetValueForProperty(__unsafe_unretained id model, __unsafe_unre
                     
                 case WSEncodingTypeNSArray:
                 case WSEncodingTypeNSMutableArray: {
-                    
+                
                 } break;
                     
                 default:
