@@ -33,4 +33,6 @@
 
 + (nullable instancetype)modelWithJson:(id _Nullable )json;
 
+- (BOOL)modelSetWithDictionary:(NSDictionary *)dic;
+
 @end

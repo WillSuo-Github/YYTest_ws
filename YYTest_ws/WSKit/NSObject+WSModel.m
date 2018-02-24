@@ -564,6 +564,19 @@ static force_inline NSDate *WSNSDateFromString(__unsafe_unretained NSString *str
 #undef kParserNum
 }
 
+static force_inline Class WSNSBlockClass() {
+    static Class cls;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        void (^block)(void) = ^{};
+        cls = ((NSObject *)block).class;
+        while (class_getSuperclass(cls) != [NSObject class]) {
+            cls = class_getSuperclass(cls);
+        }
+    });
+    return cls;
+}
+
 static void ModelSetValueForProperty(__unsafe_unretained id model, __unsafe_unretained id value, __unsafe_unretained _WSModelPropertyMeta *meta) {
     if (meta->_isCNumber) {
         NSNumber *num = WSNSNumberCreateFromID(value);
@@ -672,28 +685,217 @@ static void ModelSetValueForProperty(__unsafe_unretained id model, __unsafe_unre
                     
                 case WSEncodingTypeNSArray:
                 case WSEncodingTypeNSMutableArray: {
-                    
+                    if (meta->_genericCls) {
+                        NSArray *valueArr = nil;
+                        if ([value isKindOfClass:[NSArray class]]) valueArr = value;
+                        else if ([value isKindOfClass:[NSSet class]]) valueArr = ((NSSet *)value).allObjects;
+                        if (valueArr) {
+                            NSMutableArray *objectArr = [NSMutableArray array];
+                            for (id one in valueArr) {
+                                if ([one isKindOfClass:meta->_genericCls]) {
+                                    [objectArr addObject:one];
+                                }else if ([one isKindOfClass:[NSDictionary class]]) {
+                                    Class cls = meta->_genericCls;
+                                    if (meta->_hasCustomClassFromDictionary) {
+                                        cls = [cls modelCustomClassForDictionary:one];
+                                        if (!cls) cls = meta->_genericCls;
+                                    }
+                                    NSObject *newOne = [cls new];
+                                    [newOne modelSetWithDictionary:one];
+                                    if (newOne) [objectArr addObject:newOne];
+                                }
+                            }
+                            ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, objectArr);
+                        }
+                    }else {
+                        if ([value isKindOfClass:[NSArray class]]) {
+                            if (meta->_nsType == WSEncodingTypeNSArray) {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, value);
+                            }else {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, ((NSArray *)value).mutableCopy);
+                            }
+                        }else if ([value isKindOfClass:[NSSet class]]) {
+                            if (meta->_nsType == WSEncodingTypeNSArray) {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, ((NSSet *)value).allObjects);
+                            }else {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, ((NSSet *)value).allObjects.mutableCopy);
+                            }
+                        }
+                    }
                 } break;
+                    
+                case WSEncodingTypeNSDictionary:
+                case WSEncodingTypeNSMutableDictionary: {
+                    if ([value isKindOfClass:[NSDictionary class]]) {
+                        if (meta->_genericCls) {
+                            NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                            [((NSDictionary *)value) enumerateKeysAndObjectsUsingBlock:^(NSString *oneKey, id oneValue, BOOL * _Nonnull stop) {
+                                if ([oneValue isKindOfClass:[NSDictionary class]]) {
+                                    Class cls = meta->_genericCls;
+                                    if (meta->_hasCustomClassFromDictionary) {
+                                        cls = [cls modelCustomClassForDictionary:oneValue];
+                                        if (!cls) cls = meta->_genericCls;
+                                    }
+                                    NSObject *newOne = [cls new];
+                                    [newOne modelSetWithDictionary:oneValue];
+                                    if (newOne) dic[oneKey] = newOne;
+                                }
+                            }];
+                            ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, dic);
+                        }else {
+                            if (meta->_nsType == WSEncodingTypeNSDictionary) {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, value);
+                            }else {
+                                ((void (*)(id, SEL, id))(void *)objc_msgSend)((id)model, meta->_setter, ((NSDictionary *)value).mutableCopy);
+                            }
+                        }
+                    }
+                } break;
+                    
+                case WSEncodingTypeNSSet:
+                case WSEncodingTypeNSMutableSet: {
+                    NSSet *valueSet = nil;
+                    if ([value isKindOfClass:[NSArray class]]) valueSet = [NSMutableSet setWithArray:value];
+                    else if ([value isKindOfClass:[NSSet class]]) valueSet = (NSSet *)value;
+                    
+                    if (meta->_genericCls) {
+                        NSMutableSet *set = [NSMutableSet set];
+                        for (id one in valueSet) {
+                            if ([one isKindOfClass:meta->_genericCls]) {
+                                [set addObject:one];
+                            }else if ([one isKindOfClass:[NSDictionary class]]) {
+                                Class cls = meta->_genericCls;
+                                if (meta->_hasCustomClassFromDictionary) {
+                                    cls = [cls modelCustomClassForDictionary:one];
+                                    if (!cls) cls = meta->_genericCls;
+                                }
+                                NSObject *newOne = [cls new];
+                                [newOne modelSetWithDictionary:one];
+                                if (newOne) [set addObject:newOne];
+                            }
+                        }
+                        ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, set);
+                    }else {
+                        if (meta->_nsType == WSEncodingTypeNSSet) {
+                            ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, valueSet);
+                        } else {
+                            ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model,
+                                                                           meta->_setter,
+                                                                           ((NSSet *)valueSet).mutableCopy);
+                        }
+                    }
+                } //break;
                     
                 default:
                     break;
             }
+        }
+    }else {
+        BOOL isNull = (value == (id)kCFNull);
+        switch (meta->_type & WSEncodingTypeMask) {
+            case WSEncodingTypeObject: {
+                Class cls = meta->_genericCls ?: meta->_cls;
+                if (isNull) {
+                    ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, nil);
+                }else if ([value isKindOfClass:cls] || cls) {
+                    ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, value);
+                }else if ([value isKindOfClass:[NSDictionary class]]) {
+                    NSObject *one = nil;
+                    if (meta->_getter) {
+                        one = ((id (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter);
+                    }
+                    if (one) {
+                        [one modelSetWithDictionary:value];
+                    }else {
+                        if (meta->_hasCustomClassFromDictionary) {
+                            cls = [cls modelCustomClassForDictionary:value] ?: cls;
+                        }
+                        one = [cls new];
+                        [one modelSetWithDictionary:value];
+                        ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, one); //???  我觉着这个地方应该写在else的外边, 但是不知道为什么写在了里边
+                    }
+                }
+            } break;
+                
+            case WSEncodingTypeClass: {
+                if (isNull) {
+                    ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, NULL);
+                }else {
+                    Class cls = nil;
+                    if ([value isKindOfClass:[NSString class]]) {
+                        cls = NSClassFromString(value);
+                        if (cls) {
+                            ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, cls);
+                        }
+                    }else {
+                        cls = object_getClass(value);
+                        if (cls) {
+                            if (class_isMetaClass(cls)) {
+                                ((void (*)(id, SEL, id))(void *) objc_msgSend)((id)model, meta->_setter, value);
+                            }
+                        }
+                    }
+                }
+            } break;
+                
+            case WSEncodingTypeSEL: {
+                if (isNull) {
+                    ((void (*)(id, SEL, SEL))(void *) objc_msgSend)((id)model, meta->_setter, (SEL)NULL);
+                }else if ([value isKindOfClass:[NSString class]]) {
+                    SEL sel = NSSelectorFromString(value);
+                    if (sel) ((void (*)(id, SEL, SEL))(void *) objc_msgSend)((id)model, meta->_setter, (SEL)sel);
+                }
+            } break;
+                
+            case WSEncodingTypeBlock: {
+                if (isNull) {
+                    ((void (*)(id, SEL, void(^)(void)))(void *) objc_msgSend)((id)model, meta->_setter, (void(^)(void))NULL);
+                }else if ([value isKindOfClass:WSNSBlockClass()]) {
+                    ((void (*)(id, SEL, void(^)(void)))(void *) objc_msgSend)((id)model, meta->_setter, (void(^)(void))value);
+                }
+            } break;
+                
+            case WSEncodingTypeStruct:
+            case WSEncodingTypeUnion:
+            case WSEncodingTypeCArray: {
+                if ([value isKindOfClass:[NSValue class]]) {
+                    const char *valueType = ((NSValue *)value).objCType;
+                    const char *metaType = meta->_info.typeEncoding.UTF8String;
+                    if (valueType && metaType && strcmp(valueType, metaType) == 0) {
+                        [model setValue:value forKey:meta->_name];
+                    }
+                }
+            } break;
+                
+            case WSEncodingTypePointer:
+            case WSEncodingTypeCString: {
+                if (isNull) {
+                    ((void (*)(id, SEL, void *))(void *) objc_msgSend)((id)model, meta->_setter, (void *)NULL);
+                }else {
+                    NSValue *nsValue = value;
+                    if (nsValue.objCType && strcmp(nsValue.objCType, "^v") == 0) {
+                        ((void (*)(id, SEL, void *))(void *) objc_msgSend)((id)model, meta->_setter, (void *)nsValue.pointerValue);
+                    }
+                }
+            }
+            default:
+                break;
         }
     }
 }
 
 
 static void ModelSetWithDictionaryFunction(const void *_key, const void *_value, void *_context) {
-    ModelSetContext *context = context;
+    ModelSetContext *context = _context;
     __unsafe_unretained _WSModelMeta *meta = (__bridge _WSModelMeta *)(context->modelMeta);
-    __unsafe_unretained _WSModelPropertyMeta *propertyModel = [meta->_mapper objectForKey:(__bridge id _Nonnull)(_key)];
+    __unsafe_unretained _WSModelPropertyMeta *propertyMeta = [meta->_mapper objectForKey:(__bridge id)(_key)];
     __unsafe_unretained id model = (__bridge id)(context->model);
-    while (propertyModel) {
-        if (propertyModel->_setter) {
-            ModelSetValueForProperty(model, (__bridge_transfer __unsafe_unretained id)_value, meta);
+    while (propertyMeta) {
+        if (propertyMeta->_setter) {
+            ModelSetValueForProperty(model, (__bridge __unsafe_unretained id)_value, propertyMeta);
         }
-        propertyModel = propertyModel->_next;
-    }
+        propertyMeta = propertyMeta->_next;
+    };
 }
 
 
@@ -817,7 +1019,10 @@ static force_inline void ModelSetNumberToProperty(__unsafe_unretained id model,
     context.dictionary = (__bridge void *)(dic);
     
     if (modelMeta->_keyMappedCount >= CFDictionaryGetCount((CFDictionaryRef)dic)) {
-        CFDictionaryApplyFunction((CFDictionaryRef)dic, <#CFDictionaryApplierFunction applier#>, <#void *context#>)
+        CFDictionaryApplyFunction((CFDictionaryRef)dic, ModelSetWithDictionaryFunction, &context);
+        if (modelMeta->_keyPathPropertyMetas) {
+            
+        }
     }
 }
 
