@@ -241,6 +241,39 @@ WSEncodingType WSEncodingGetType(const char *typeEncoding) {
     BOOL _needUpdate;
 }
 
++ (nullable instancetype)classInfoWithClass:(Class)cls {
+    if (!cls) return nil;
+    static CFMutableDictionaryRef classCache;
+    static CFMutableDictionaryRef metaCache;
+    static dispatch_once_t onceToken;
+    static dispatch_semaphore_t lock;
+    dispatch_once(&onceToken, ^{
+        classCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        metaCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        lock = dispatch_semaphore_create(1);
+    });
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    WSClassInfo *info = CFDictionaryGetValue(class_isMetaClass(cls) ? metaCache : classCache, (__bridge const void *)(cls));
+    if (info && info->_needUpdate) {
+        [info _update];
+    }
+    dispatch_semaphore_signal(lock);
+    if (!info) {
+        info = [[WSClassInfo alloc] initWithClass:cls];
+        if (info) {
+            dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+            CFDictionarySetValue(info.isMeta ? metaCache : classCache, (__bridge const void *)(cls), (__bridge const void *)(info));
+            dispatch_semaphore_signal(lock);
+        }
+    }
+    return info;
+}
+
++ (instancetype)classInfoWithClassName:(NSString *)className {
+    Class cls = NSClassFromString(className);
+    return [self classInfoWithClass:cls];
+}
+
 - (instancetype)initWithClass:(Class)cls {
     if (!cls) return nil;
     self = [super init];
@@ -306,32 +339,12 @@ WSEncodingType WSEncodingGetType(const char *typeEncoding) {
     _needUpdate = false;
 }
 
-+ (nullable instancetype)classInfoWithClass:(Class)cls {
-    if (!cls) return nil;
-    static CFMutableDictionaryRef classCache;
-    static CFMutableDictionaryRef metaCache;
-    static dispatch_once_t onceToken;
-    static dispatch_semaphore_t lock;
-    dispatch_once(&onceToken, ^{
-        classCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        metaCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        lock = dispatch_semaphore_create(1);
-    });
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    WSClassInfo *info = CFDictionaryGetValue(class_isMetaClass(cls) ? metaCache : classCache, (__bridge const void *)(cls));
-    if (info && info->_needUpdate) {
-        [info _update];
-    }
-    dispatch_semaphore_signal(lock);
-    if (!info) {
-        info = [[WSClassInfo alloc] initWithClass:cls];
-        if (info) {
-            dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-            CFDictionarySetValue(info.isMeta ? metaCache : classCache, (__bridge const void *)(cls), (__bridge const void *)(info));
-            dispatch_semaphore_signal(lock);
-        }
-    }
-    return info;
+- (void)setNeedUpdate {
+    _needUpdate = true;
+}
+
+- (BOOL)needUpdate{
+    return _needUpdate;
 }
 
 @end

@@ -7,6 +7,7 @@
 //
 
 #import "WSModelExample.h"
+#import "WSKit.h"
 
 #pragma mark Simple Object Example
 @interface WSBook: NSObject
@@ -19,7 +20,13 @@
 @end
 
 static void SimpleObjectExample() {
-    WSBook *book = [WSBook  ]
+    WSBook *book = [WSBook modelWithJson:@"     \
+    {                                           \
+       \"name\": \"Harry Potter\",              \
+       \"pages\": 512,                          \
+       \"publishDate\": \"2010-01-01\"          \
+    }"];
+    NSLog(@"%@", book);
 }
 
 
@@ -31,7 +38,7 @@ static void SimpleObjectExample() {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view.
+    SimpleObjectExample();
 }
 
 - (void)didReceiveMemoryWarning {
