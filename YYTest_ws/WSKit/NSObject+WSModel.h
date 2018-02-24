@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 @protocol WSModel <NSObject>
 @optional
 + (nullable NSArray<NSString *> *)modelPropertyBlackList;
@@ -36,3 +38,5 @@
 - (BOOL)modelSetWithDictionary:(NSDictionary *)dic;
 
 @end
+
+NS_ASSUME_NONNULL_END

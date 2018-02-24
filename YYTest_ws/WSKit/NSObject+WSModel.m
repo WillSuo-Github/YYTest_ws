@@ -126,6 +126,35 @@ static force_inline NSNumber *WSNSNumberCreateFromID(__unsafe_unretained id valu
     return nil;
 }
 
+static force_inline id WSValueForKeyPath(__unsafe_unretained NSDictionary *dic, __unsafe_unretained NSArray *keyPaths) {
+    id value = nil;
+    for (NSUInteger i = 0, max = keyPaths.count; i < max ; i ++) {
+        value = dic[keyPaths[i]];
+        if (i + 1 < max) {
+            if ([value isKindOfClass:[NSDictionary class]]) {
+                dic = value;
+            }else {
+                return nil;
+            }
+        }
+    }
+    return value;
+}
+
+static force_inline id WSValueForMultiKeys(__unsafe_unretained NSDictionary *dic, __unsafe_unretained NSArray *multiKeys) {
+    id value = nil;
+    for (NSString *key in multiKeys) {
+        if ([key isKindOfClass:[NSString class]]) {
+            value = dic[key];
+            if (value) break;
+        }else{
+            value = WSValueForKeyPath(dic, (NSArray *)key);
+            if (value) break;
+        }
+    }
+    return value;
+}
+
 @interface _WSModelPropertyMeta: NSObject {
     @package
     NSString *_name;
@@ -577,10 +606,69 @@ static force_inline Class WSNSBlockClass() {
     return cls;
 }
 
+static force_inline void ModelSetNumberToProperty(__unsafe_unretained id model,
+                                                  __unsafe_unretained NSNumber *num,
+                                                  __unsafe_unretained _WSModelPropertyMeta *meta) {
+    switch (meta->_type & WSEncodingTypeMask) {
+        case WSEncodingTypeBool:{
+            ((void (*)(id, SEL, bool))(void *) objc_msgSend)((id)model, meta->_setter, num.boolValue);
+        } break;
+        case WSEncodingTypeInt8:{
+            ((void (*)(id, SEL, bool))(void *) objc_msgSend)((id)model, meta->_setter, num.charValue);
+        } break;
+        case WSEncodingTypeUInt8: {
+            ((void (*)(id, SEL, uint8_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint8_t)num.unsignedCharValue);
+        } break;
+        case WSEncodingTypeInt16: {
+            ((void (*)(id, SEL, int16_t))(void *) objc_msgSend)((id)model, meta->_setter, (int16_t)num.shortValue);
+        } break;
+        case WSEncodingTypeUInt16: {
+            ((void (*)(id, SEL, uint16_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint16_t)num.unsignedShortValue);
+        } break;
+        case WSEncodingTypeInt32: {
+            ((void (*)(id, SEL, int32_t))(void *) objc_msgSend)((id)model, meta->_setter, (int32_t)num.intValue);
+        }
+        case WSEncodingTypeUInt32: {
+            ((void (*)(id, SEL, uint32_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint32_t)num.unsignedIntValue);
+        } break;
+        case WSEncodingTypeInt64: {
+            if ([num isKindOfClass:[NSDecimalNumber class]]) {
+                ((void (*)(id, SEL, int64_t))(void *) objc_msgSend)((id)model, meta->_setter, (int64_t)num.stringValue.longLongValue);
+            } else {
+                ((void (*)(id, SEL, uint64_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint64_t)num.longLongValue);
+            }
+        } break;
+        case WSEncodingTypeUInt64: {
+            if ([num isKindOfClass:[NSDecimalNumber class]]) {
+                ((void (*)(id, SEL, int64_t))(void *) objc_msgSend)((id)model, meta->_setter, (int64_t)num.stringValue.longLongValue);
+            } else {
+                ((void (*)(id, SEL, uint64_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint64_t)num.unsignedLongLongValue);
+            }
+        } break;
+        case WSEncodingTypeFloat: {
+            float f = num.floatValue;
+            if (isnan(f) || isinf(f)) f = 0;
+            ((void (*)(id, SEL, float))(void *) objc_msgSend)((id)model, meta->_setter, f);
+        } break;
+        case WSEncodingTypeDouble: {
+            double d = num.doubleValue;
+            if (isnan(d) || isinf(d)) d = 0;
+            ((void (*)(id, SEL, double))(void *) objc_msgSend)((id)model, meta->_setter, d);
+        } break;
+        case WSEncodingTypeLongDouble: {
+            long double d = num.doubleValue;
+            if (isnan(d) || isinf(d)) d = 0;
+            ((void (*)(id, SEL, long double))(void *) objc_msgSend)((id)model, meta->_setter, (long double)d);
+        } // break; commented for code coverage in next line
+        default: break;
+            
+    }
+}
+
 static void ModelSetValueForProperty(__unsafe_unretained id model, __unsafe_unretained id value, __unsafe_unretained _WSModelPropertyMeta *meta) {
     if (meta->_isCNumber) {
         NSNumber *num = WSNSNumberCreateFromID(value);
-        ModelSetValueForProperty(model, num, meta);
+        ModelSetNumberToProperty(model, num, meta);
         if (num != nil) [num class];// hold the number ???
     }else if (meta->_nsType) {
         if (value == (id)kCFNull) {
@@ -898,68 +986,26 @@ static void ModelSetWithDictionaryFunction(const void *_key, const void *_value,
     };
 }
 
-
-
-
-static force_inline void ModelSetNumberToProperty(__unsafe_unretained id model,
-                                                  __unsafe_unretained NSNumber *num,
-                                                  __unsafe_unretained _WSModelPropertyMeta *meta) {
-    switch (meta->_type & WSEncodingTypeMask) {
-        case WSEncodingTypeBool:{
-            ((void (*)(id, SEL, bool))(void *) objc_msgSend)((id)model, meta->_setter, num.boolValue);
-        } break;
-        case WSEncodingTypeInt8:{
-            ((void (*)(id, SEL, bool))(void *) objc_msgSend)((id)model, meta->_setter, num.charValue);
-        } break;
-        case WSEncodingTypeUInt8: {
-            ((void (*)(id, SEL, uint8_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint8_t)num.unsignedCharValue);
-        } break;
-        case WSEncodingTypeInt16: {
-            ((void (*)(id, SEL, int16_t))(void *) objc_msgSend)((id)model, meta->_setter, (int16_t)num.shortValue);
-        } break;
-        case WSEncodingTypeUInt16: {
-            ((void (*)(id, SEL, uint16_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint16_t)num.unsignedShortValue);
-        } break;
-        case WSEncodingTypeInt32: {
-            ((void (*)(id, SEL, int32_t))(void *) objc_msgSend)((id)model, meta->_setter, (int32_t)num.intValue);
-        }
-        case WSEncodingTypeUInt32: {
-            ((void (*)(id, SEL, uint32_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint32_t)num.unsignedIntValue);
-        } break;
-        case WSEncodingTypeInt64: {
-            if ([num isKindOfClass:[NSDecimalNumber class]]) {
-                ((void (*)(id, SEL, int64_t))(void *) objc_msgSend)((id)model, meta->_setter, (int64_t)num.stringValue.longLongValue);
-            } else {
-                ((void (*)(id, SEL, uint64_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint64_t)num.longLongValue);
-            }
-        } break;
-        case WSEncodingTypeUInt64: {
-            if ([num isKindOfClass:[NSDecimalNumber class]]) {
-                ((void (*)(id, SEL, int64_t))(void *) objc_msgSend)((id)model, meta->_setter, (int64_t)num.stringValue.longLongValue);
-            } else {
-                ((void (*)(id, SEL, uint64_t))(void *) objc_msgSend)((id)model, meta->_setter, (uint64_t)num.unsignedLongLongValue);
-            }
-        } break;
-        case WSEncodingTypeFloat: {
-            float f = num.floatValue;
-            if (isnan(f) || isinf(f)) f = 0;
-            ((void (*)(id, SEL, float))(void *) objc_msgSend)((id)model, meta->_setter, f);
-        } break;
-        case WSEncodingTypeDouble: {
-            double d = num.doubleValue;
-            if (isnan(d) || isinf(d)) d = 0;
-            ((void (*)(id, SEL, double))(void *) objc_msgSend)((id)model, meta->_setter, d);
-        } break;
-        case WSEncodingTypeLongDouble: {
-            long double d = num.doubleValue;
-            if (isnan(d) || isinf(d)) d = 0;
-            ((void (*)(id, SEL, long double))(void *) objc_msgSend)((id)model, meta->_setter, (long double)d);
-        } // break; commented for code coverage in next line
-        default: break;
-            
+static void ModelSetWithPropertyMetaArrayFunction(const void *_propertyMeta, void *_context) {
+    ModelSetContext *context = _context;
+    __unsafe_unretained NSDictionary *dictionary = (__bridge NSDictionary *)(context->dictionary);
+    __unsafe_unretained _WSModelPropertyMeta *propertyMeta = (__bridge _WSModelPropertyMeta *)(_propertyMeta);
+    if (!propertyMeta->_setter) return;
+    id value = nil;
+    
+    if (propertyMeta->_mappedToKeyArray) {
+        value = WSValueForMultiKeys(dictionary, propertyMeta->_mappedToKeyArray);
+    }else if (propertyMeta->_mappedToKeyPath) {
+        value = WSValueForKeyPath(dictionary, propertyMeta->_mappedToKeyPath);
+    }else {
+        value = [dictionary objectForKey:propertyMeta->_mappedToKey];
+    }
+    
+    if (value) {
+        __unsafe_unretained id model = (__bridge id)(context->model);
+        ModelSetValueForProperty(model, value, propertyMeta);
     }
 }
-
 
 @implementation NSObject (WSModel)
 
@@ -1021,9 +1067,28 @@ static force_inline void ModelSetNumberToProperty(__unsafe_unretained id model,
     if (modelMeta->_keyMappedCount >= CFDictionaryGetCount((CFDictionaryRef)dic)) {
         CFDictionaryApplyFunction((CFDictionaryRef)dic, ModelSetWithDictionaryFunction, &context);
         if (modelMeta->_keyPathPropertyMetas) {
-            
+            CFArrayApplyFunction((CFArrayRef)modelMeta->_keyPathPropertyMetas,
+                                 CFRangeMake(0, CFArrayGetCount((CFArrayRef)modelMeta->_keyPathPropertyMetas)),
+                                 ModelSetWithPropertyMetaArrayFunction,
+                                 &context);
         }
+        if (modelMeta->_multiKeysPropertyMetas) {
+            CFArrayApplyFunction((CFArrayRef)modelMeta->_multiKeysPropertyMetas,
+                                 CFRangeMake(0, CFArrayGetCount((CFArrayRef)modelMeta->_multiKeysPropertyMetas)),
+                                 ModelSetWithPropertyMetaArrayFunction,
+                                 &context);
+        }
+    }else {
+        CFArrayApplyFunction((CFArrayRef)modelMeta->_allPropertyMetas,
+                             CFRangeMake(0, modelMeta->_keyMappedCount),
+                             ModelSetWithPropertyMetaArrayFunction,
+                             &context);
     }
+    
+    if (modelMeta->_hasCustomTransformFromDictionary) {
+        return [((id<WSModel>)self) modelCustomTransformFromDictionary:dic];
+    }
+    return true;
 }
 
 @end
