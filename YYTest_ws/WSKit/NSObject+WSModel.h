@@ -37,6 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL)modelSetWithDictionary:(NSDictionary *)dic;
 
+- (NSString *)modelToJSONString;
+
 @end
 
 NS_ASSUME_NONNULL_END
