@@ -1071,7 +1071,6 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
     if (!model || model == (id)kCFNull) return model;
     if ([model isKindOfClass:[NSString class]]) return model;
     if ([model isKindOfClass:[NSNumber class]]) return model;
-    if ([model isKindOfClass:[NSDictionary class]]) return model;
     if ([model isKindOfClass:[NSDictionary class]]) {
         if ([NSJSONSerialization isValidJSONObject:model]) return model;
         NSMutableDictionary *newDic = [NSMutableDictionary new];
@@ -1142,9 +1141,8 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
                     if (value == (id)kCFNull) value = nil;
                 }   break;
                 case WSEncodingTypeSEL:{
-                    id v = ((SEL (*)(id, SEL))objc_msgSend)((id)model, propertyMeta->_getter);
-                    value = ModelToJSONObjectRecursive(v);
-                    if (value == (id)kCFNull) value = nil;
+                    SEL v = ((SEL (*)(id, SEL))(void *)objc_msgSend)((id)model, propertyMeta->_getter);
+                    value = v ? NSStringFromSelector(v) : nil;
                 }   break;
                 default: break;
             }
@@ -1162,10 +1160,32 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
                 }
                 
                 subDic = superDic[key];
-                
+                if (subDic) {
+                    if ([subDic isKindOfClass:[NSDictionary class]]) {
+                        subDic = subDic.mutableCopy;
+                        superDic[key] = subDic;
+                    }else {
+                        break;
+                    }
+                }else {
+                    subDic = [NSMutableDictionary dictionary];
+                    superDic[key] = subDic;
+                }
+                superDic = subDic;
+                subDic = nil;
+            }
+        }else {
+            if (!dic[propertyMeta->_mappedToKey]) {
+                dic[propertyMeta->_mappedToKey] = value;
             }
         }
     }];
+    
+    if (modelMeta->_hasCustomTransformToDictionary) {
+        BOOL suc = [((id<WSModel>)model) modelCustomTransformToDictionary:dic];
+        if (!suc) return nil;
+    }
+    return result;
 }
 
 @implementation NSObject (WSModel)
@@ -1253,15 +1273,22 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
 }
 
 - (id)modelToJSONObject {
-    id jsonObject =
+    id jsonObject = ModelToJSONObjectRecursive(self);
+    if ([jsonObject isKindOfClass:[NSArray class]]) return jsonObject;
+    if ([jsonObject isKindOfClass:[NSDictionary class]]) return jsonObject;
+    return nil;
 }
 
 - (NSData *)modelToJSONData {
-    id jsonObject = [self ]
+    id jsonObject = [self modelToJSONObject];
+    if (!jsonObject) return nil;
+    return [NSJSONSerialization dataWithJSONObject:jsonObject options:0 error:nil];
 }
 
 - (NSString *)modelToJSONString {
-    NSData *jsonData = [self ]
+    NSData *jsonData = [self modelToJSONData];
+    if (jsonData.length == 0) return nil;
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 }
 
 @end

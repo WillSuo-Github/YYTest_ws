@@ -45,7 +45,7 @@ static void SimpleObjectExample() {
 @property (nonatomic, strong) WSUser *owner;
 @end
 
-@implementation
+@implementation WSRepo
 @end
 
 static void NextObjectExample() {
@@ -59,7 +59,56 @@ static void NextObjectExample() {
             \"name\" : \"ibireme\"                  \
         }                                           \
     }"];
-    NSString *repoJson = [repo ]
+    NSString *repoJson = [repo modelToJSONString];
+    NSLog(@"Repo: %@", repoJson);
+}
+
+#pragma mark Container Object Example
+@interface WSPhoto: NSObject
+@property (nonatomic, copy) NSString *url;
+@property (nonatomic, copy) NSString *desc;
+@end
+
+@implementation WSPhoto
+@end
+
+@interface WSAlbum: NSObject
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, strong) NSArray *photos;
+@property (nonatomic, strong) NSDictionary *likedUsers;
+@property (nonatomic, strong) NSSet *likedUserIds;
+@end
+
+@implementation WSAlbum
++ (NSDictionary *)modelContainerPropertyGenericClass {
+    return @{@"photos": WSPhoto.class,
+             @"likedUsers": WSUser.class,
+             @"likedUserIds": NSNumber.class};
+}
+@end
+
+static void ContainerObjectExample() {
+    WSAlbum *album = [WSAlbum modelWithJson:@"          \
+    {                                                   \
+    \"name\" : \"Happy Birthday\",                      \
+    \"photos\" : [                                      \
+        {                                               \
+            \"url\":\"http://example.com/1.png\",       \
+            \"desc\":\"Happy~\"                         \
+        },                                              \
+        {                                               \
+            \"url\":\"http://example.com/2.png\",       \
+            \"desc\":\"Yeah!\"                          \
+        }                                               \
+    ],                                                  \
+    \"likedUsers\" : {                                  \
+        \"Jony\" : {\"uid\":10001,\"name\":\"Jony\"},   \
+        \"Anna\" : {\"uid\":10002,\"name\":\"Anna\"}    \
+    },                                                  \
+    \"likedUserIds\" : [10001,10002]                    \
+    }"];
+    NSString *albumJson = [album modelToJSONString];
+    NSLog(@"%@", albumJson);
 }
 
 
@@ -71,7 +120,9 @@ static void NextObjectExample() {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    SimpleObjectExample();
+//    SimpleObjectExample();
+//    NextObjectExample();
+    ContainerObjectExample();
 }
 
 - (void)didReceiveMemoryWarning {
