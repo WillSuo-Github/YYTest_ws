@@ -29,6 +29,88 @@ static void SimpleObjectExample() {
     NSLog(@"%@", book);
 }
 
+#pragma mark Next Object Example
+@interface WSUser: NSObject
+@property (nonatomic, assign) uint64_t uid;
+@property (nonatomic, copy) NSString *name;
+@end
+
+@implementation WSUser
+@end
+
+@interface WSRepo: NSObject
+@property (nonatomic, assign) uint64_t rid;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, strong) NSData *createTime;
+@property (nonatomic, strong) WSUser *owner;
+@end
+
+@implementation WSRepo
+@end
+
+static void NextObjectExample() {
+    WSRepo *repo = [WSRepo modelWithJson:@"         \
+    {                                               \
+        \"rid\": 123456789,                         \
+        \"name\": \"YYKit\",                        \
+        \"createTime\" : \"2011-06-09T06:24:26Z\",  \
+        \"owner\": {                                \
+            \"uid\" : 989898,                       \
+            \"name\" : \"ibireme\"                  \
+        }                                           \
+    }"];
+    NSString *repoJson = [repo modelToJSONString];
+    NSLog(@"Repo: %@", repoJson);
+}
+
+#pragma mark Container Object Example
+@interface WSPhoto: NSObject
+@property (nonatomic, copy) NSString *url;
+@property (nonatomic, copy) NSString *desc;
+@end
+
+@implementation WSPhoto
+@end
+
+@interface WSAlbum: NSObject
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, strong) NSArray *photos;
+@property (nonatomic, strong) NSDictionary *likedUsers;
+@property (nonatomic, strong) NSSet *likedUserIds;
+@end
+
+@implementation WSAlbum
++ (NSDictionary *)modelContainerPropertyGenericClass {
+    return @{@"photos": WSPhoto.class,
+             @"likedUsers": WSUser.class,
+             @"likedUserIds": NSNumber.class};
+}
+@end
+
+static void ContainerObjectExample() {
+    WSAlbum *album = [WSAlbum modelWithJson:@"          \
+    {                                                   \
+    \"name\" : \"Happy Birthday\",                      \
+    \"photos\" : [                                      \
+        {                                               \
+            \"url\":\"http://example.com/1.png\",       \
+            \"desc\":\"Happy~\"                         \
+        },                                              \
+        {                                               \
+            \"url\":\"http://example.com/2.png\",       \
+            \"desc\":\"Yeah!\"                          \
+        }                                               \
+    ],                                                  \
+    \"likedUsers\" : {                                  \
+        \"Jony\" : {\"uid\":10001,\"name\":\"Jony\"},   \
+        \"Anna\" : {\"uid\":10002,\"name\":\"Anna\"}    \
+    },                                                  \
+    \"likedUserIds\" : [10001,10002]                    \
+    }"];
+    NSString *albumJson = [album modelToJSONString];
+    NSLog(@"%@", albumJson);
+}
+
 
 @interface WSModelExample ()
 
@@ -38,7 +120,9 @@ static void SimpleObjectExample() {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    SimpleObjectExample();
+//    SimpleObjectExample();
+//    NextObjectExample();
+    ContainerObjectExample();
 }
 
 - (void)didReceiveMemoryWarning {
