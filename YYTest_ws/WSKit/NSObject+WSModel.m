@@ -155,6 +155,17 @@ static force_inline id WSValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     return value;
 }
 
+static force_inline NSDateFormatter *WSISODateFormatter() {
+    static NSDateFormatter *formatter = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSDateFormatter alloc] init];
+        formatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ssZ";
+    });
+    return formatter;
+}
+
 @interface _WSModelPropertyMeta: NSObject {
     @package
     NSString *_name;
@@ -206,7 +217,7 @@ static force_inline id WSValueForMultiKeys(__unsafe_unretained NSDictionary *dic
     if ((meta->_type & WSEncodingTypeMask) == WSEncodingTypeStruct) {
         /*
          It seems that NSKeyedUnarchiver cannot decode NSValue except these structs:
-         归档引起的struct 问题吗
+         归档引起的struct 问题吗???
          */
         static NSSet *types = nil;
         static dispatch_once_t onceToken;
@@ -1007,6 +1018,176 @@ static void ModelSetWithPropertyMetaArrayFunction(const void *_propertyMeta, voi
     }
 }
 
+static force_inline NSNumber *ModelCreateNumberFromProperty(__unsafe_unretained id model,
+                                                            __unsafe_unretained _WSModelPropertyMeta *meta) {
+    switch (meta->_type & WSEncodingTypeMask) {
+        case WSEncodingTypeBool: {
+            return @(((bool (*)(id, SEL))(void *)objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeInt8: {
+            return @(((int8_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeUInt8: {
+            return @(((uint8_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeInt16: {
+            return @(((int16_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeUInt16: {
+            return @(((uint16_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeInt32: {
+            return @(((int32_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeUInt32: {
+            return @(((uint32_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeInt64: {
+            return @(((int64_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeUInt64: {
+            return @(((uint64_t (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter));
+        }
+        case WSEncodingTypeFloat: {
+            float num = ((float (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter);
+            if (isnan(num) || isinf(num)) return nil;
+            return @(num);
+        }
+        case WSEncodingTypeDouble: {
+            double num = ((double (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter);
+            if (isnan(num) || isinf(num)) return nil;
+            return @(num);
+        }
+        case WSEncodingTypeLongDouble: {
+            double num = ((long double (*)(id, SEL))(void *) objc_msgSend)((id)model, meta->_getter);
+            if (isnan(num) || isinf(num)) return nil;
+            return @(num);
+        }
+        default: return nil;
+    }
+}
+
+static id ModelToJSONObjectRecursive(NSObject *model) {
+    if (!model || model == (id)kCFNull) return model;
+    if ([model isKindOfClass:[NSString class]]) return model;
+    if ([model isKindOfClass:[NSNumber class]]) return model;
+    if ([model isKindOfClass:[NSDictionary class]]) {
+        if ([NSJSONSerialization isValidJSONObject:model]) return model;
+        NSMutableDictionary *newDic = [NSMutableDictionary new];
+        [((NSDictionary *)model) enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL * _Nonnull stop) {
+            NSString *stringKey = [key isKindOfClass:[NSString class]] ? key : key.description;
+            if (!stringKey) return;
+            id jsonObj = ModelToJSONObjectRecursive(obj);
+            if (!jsonObj) jsonObj = (id)kCFNull;
+            newDic[stringKey] = jsonObj;
+        }];
+        return newDic;
+    }
+    if ([model isKindOfClass:[NSSet class]]) {
+        NSArray *array = ((NSSet *)model).allObjects;
+        if ([NSJSONSerialization isValidJSONObject:array]) return array;
+        NSMutableArray *newArray = [NSMutableArray array];
+        for (id obj in array) {
+            if ([obj isKindOfClass:[NSString class]] || [obj isKindOfClass:[NSNumber class]]) {
+                [newArray addObject:obj];
+            }else {
+                id jsonObj = ModelToJSONObjectRecursive(obj);
+                if (jsonObj && jsonObj != (id)kCFNull) [newArray addObject:jsonObj];
+            }
+        }
+        return newArray;
+    }
+    if ([model isKindOfClass:[NSArray class]]) {
+        if ([NSJSONSerialization isValidJSONObject:model]) return model;
+        NSMutableArray *newArray = [NSMutableArray array];
+        for (id obj in (NSArray *)model) {
+            if ([obj isKindOfClass:[NSString class]] || [obj isKindOfClass:[NSNumber class]]) {
+                [newArray addObject:obj];
+            }else {
+                id jsonObj = ModelToJSONObjectRecursive(obj);
+                if (jsonObj && jsonObj != (id)kCFNull) [newArray addObject:jsonObj];
+            }
+        }
+        return newArray;
+    }
+    if ([model isKindOfClass:[NSURL class]]) return ((NSURL *)model).absoluteString;
+    if ([model isKindOfClass:[NSAttributedString class]]) return ((NSAttributedString *)model).string;
+    if ([model isKindOfClass:[NSDate class]]) return [WSISODateFormatter() stringFromDate:(id)model];
+    if ([model isKindOfClass:[NSData class]]) return nil;
+    
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:[model class]];
+    if (!modelMeta || modelMeta->_keyMappedCount == 0) return nil;
+    NSMutableDictionary *result = [[NSMutableDictionary alloc] initWithCapacity:64];
+    __unsafe_unretained NSMutableDictionary *dic = result;
+    [modelMeta->_mapper enumerateKeysAndObjectsUsingBlock:^(NSString *propertyMappedKey, _WSModelPropertyMeta *propertyMeta, BOOL * _Nonnull stop) {
+        if (!propertyMeta->_getter) return;
+        
+        id value = nil;
+        if (propertyMeta->_isCNumber) {
+            value = ModelCreateNumberFromProperty(model, propertyMeta);
+        }else if (propertyMeta->_nsType) {
+            id v = ((id (*)(id, SEL))objc_msgSend)((id)model, propertyMeta->_getter);
+            value = ModelToJSONObjectRecursive(v);
+        }else {
+            switch (propertyMeta->_type & WSEncodingTypeMask) {
+                case WSEncodingTypeObject:{
+                    id v = ((id (*)(id, SEL))objc_msgSend)((id)model, propertyMeta->_getter);
+                    value = ModelToJSONObjectRecursive(v);
+                    if (value == (id)kCFNull) value = nil;
+                }   break;
+                case WSEncodingTypeClass:{
+                    id v = ((Class (*)(id, SEL))objc_msgSend)((id)model, propertyMeta->_getter);
+                    value = ModelToJSONObjectRecursive(v);
+                    if (value == (id)kCFNull) value = nil;
+                }   break;
+                case WSEncodingTypeSEL:{
+                    SEL v = ((SEL (*)(id, SEL))(void *)objc_msgSend)((id)model, propertyMeta->_getter);
+                    value = v ? NSStringFromSelector(v) : nil;
+                }   break;
+                default: break;
+            }
+        }
+        if (!value) return;
+        
+        if (propertyMeta->_mappedToKeyPath) {
+            NSMutableDictionary *superDic = dic;
+            NSMutableDictionary *subDic = nil;
+            for (NSUInteger i = 0, max = propertyMeta->_mappedToKeyPath.count; i < max; i ++) {
+                NSString *key = propertyMeta->_mappedToKeyPath[i];
+                if (i + 1 == max) {
+                    if (!superDic[key]) superDic[key] = value;
+                    break;
+                }
+                
+                subDic = superDic[key];
+                if (subDic) {
+                    if ([subDic isKindOfClass:[NSDictionary class]]) {
+                        subDic = subDic.mutableCopy;
+                        superDic[key] = subDic;
+                    }else {
+                        break;
+                    }
+                }else {
+                    subDic = [NSMutableDictionary dictionary];
+                    superDic[key] = subDic;
+                }
+                superDic = subDic;
+                subDic = nil;
+            }
+        }else {
+            if (!dic[propertyMeta->_mappedToKey]) {
+                dic[propertyMeta->_mappedToKey] = value;
+            }
+        }
+    }];
+    
+    if (modelMeta->_hasCustomTransformToDictionary) {
+        BOOL suc = [((id<WSModel>)model) modelCustomTransformToDictionary:dic];
+        if (!suc) return nil;
+    }
+    return result;
+}
+
 @implementation NSObject (WSModel)
 
 + (NSDictionary *)_ws_dictionaryWithJson:(id)json {
@@ -1089,6 +1270,25 @@ static void ModelSetWithPropertyMetaArrayFunction(const void *_propertyMeta, voi
         return [((id<WSModel>)self) modelCustomTransformFromDictionary:dic];
     }
     return true;
+}
+
+- (id)modelToJSONObject {
+    id jsonObject = ModelToJSONObjectRecursive(self);
+    if ([jsonObject isKindOfClass:[NSArray class]]) return jsonObject;
+    if ([jsonObject isKindOfClass:[NSDictionary class]]) return jsonObject;
+    return nil;
+}
+
+- (NSData *)modelToJSONData {
+    id jsonObject = [self modelToJSONObject];
+    if (!jsonObject) return nil;
+    return [NSJSONSerialization dataWithJSONObject:jsonObject options:0 error:nil];
+}
+
+- (NSString *)modelToJSONString {
+    NSData *jsonData = [self modelToJSONData];
+    if (jsonData.length == 0) return nil;
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 }
 
 @end
