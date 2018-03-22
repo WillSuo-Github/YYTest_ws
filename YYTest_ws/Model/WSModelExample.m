@@ -112,6 +112,29 @@ static void ContainerObjectExample() {
 }
 
 
+#pragma mark Custom Mapper Example
+
+@interface WSMessage: NSObject
+@property (nonatomic, assign) uint64_t messageId;
+@property (nonatomic, strong) NSString *content;
+@property (nonatomic, strong) NSDate *time;
+@end
+
+@implementation WSMessage
+
++ (instancetype)modelCustomPropertyMapper {
+    return @{@"messageId": @"i",
+             @"content": @"c",
+             @"time": @"t",};
+}
+
+- (BOOL)modelCustomTransformFromDictionary:(NSDictionary *)dic {
+    uint64_t timestamp = [dic]
+}
+
+@end
+
+
 @interface WSModelExample ()
 
 @end
