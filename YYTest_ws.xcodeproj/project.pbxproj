@@ -18,6 +18,7 @@
 		8A0252E120236ADF00994329 /* WSModelExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E020236ADF00994329 /* WSModelExample.m */; };
 		8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E520236E2800994329 /* NSObject+WSModel.m */; };
 		8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E82025AA5C00994329 /* WSClassInfo.m */; };
+		8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,8 @@
 		8A0252E520236E2800994329 /* NSObject+WSModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+WSModel.m"; sourceTree = "<group>"; };
 		8A0252E72025AA5C00994329 /* WSClassInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSClassInfo.h; sourceTree = "<group>"; };
 		8A0252E82025AA5C00994329 /* WSClassInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSClassInfo.m; sourceTree = "<group>"; };
+		8A0FE94520640D200046B2CF /* NSDictionary+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSDictionary+WSAdd.h"; sourceTree = "<group>"; };
+		8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSDictionary+WSAdd.m"; sourceTree = "<group>"; };
 		AFEB8907204114320041E4E6 /* WSKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSKit.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -164,6 +167,7 @@
 		8A0252E320236DFC00994329 /* WSKit */ = {
 			isa = PBXGroup;
 			children = (
+				8A0FE94320640CF70046B2CF /* Base */,
 				8A0252E420236E2800994329 /* NSObject+WSModel.h */,
 				8A0252E520236E2800994329 /* NSObject+WSModel.m */,
 				8A0252E72025AA5C00994329 /* WSClassInfo.h */,
@@ -171,6 +175,23 @@
 				AFEB8907204114320041E4E6 /* WSKit.h */,
 			);
 			path = WSKit;
+			sourceTree = "<group>";
+		};
+		8A0FE94320640CF70046B2CF /* Base */ = {
+			isa = PBXGroup;
+			children = (
+				8A0FE94420640CFF0046B2CF /* Foundation */,
+			);
+			path = Base;
+			sourceTree = "<group>";
+		};
+		8A0FE94420640CFF0046B2CF /* Foundation */ = {
+			isa = PBXGroup;
+			children = (
+				8A0FE94520640D200046B2CF /* NSDictionary+WSAdd.h */,
+				8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */,
+			);
+			path = Foundation;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -308,6 +329,7 @@
 			files = (
 				8A0252B52023679700994329 /* main.m in Sources */,
 				8A0252A72023679700994329 /* AppDelegate.m in Sources */,
+				8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */,
 				8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */,
 				8A0252E120236ADF00994329 /* WSModelExample.m in Sources */,
 				8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */,
