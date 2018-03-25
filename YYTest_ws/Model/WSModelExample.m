@@ -154,6 +154,14 @@ static void CustomMapperExample() {
 
 @implementation WSShadow
 - (void)encodeWithCoder:(NSCoder *)aCoder {
+    [self modelEncodeWithCoder:aCoder];
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    [self modelInitWithCoder:aDecoder];
+}
+
+- (id)copyWithZone:(NSZone *)zone {
     
 }
 @end

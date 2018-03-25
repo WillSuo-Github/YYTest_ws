@@ -1325,7 +1325,67 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
                             [aCoder encodeObject:value forKey:propertyMeta->_name];
                         }
                     }
+                }   break;
+                case WSEncodingTypeSEL: {
+                    SEL value = ((SEL (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    if (value) {
+                        NSString *str = NSStringFromSelector(value);
+                        [aCoder encodeObject:str forKey:propertyMeta->_name];
+                    }
+                }   break;
+                case WSEncodingTypeStruct:
+                case WSEncodingTypeUnion: {
+                    if (propertyMeta->_isKVCCompatible && propertyMeta->_isStructAvailableForKeyedArchiver) {
+                        @try {
+                            NSValue *value = [self valueForKey:NSStringFromSelector(propertyMeta->_getter)];
+                            [aCoder encodeObject:value forKey:propertyMeta->_name];
+                        } @catch (NSException *exception) {}
+                    }
+                }   break;
+                default:
+                    break;
+            }
+        }
+    }
+}
 
+- (instancetype)modelInitWithCoder:(NSCoder *)aDecoder {
+    if (!aDecoder) return self;
+    if (self == (id)kCFNull) return self;
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:self.class];
+    if (modelMeta->_nsType) return self;
+    
+    for (_WSModelPropertyMeta *propertyMeta in modelMeta->_allPropertyMetas) {
+        if (!propertyMeta->_setter) continue;
+        
+        if (propertyMeta->_isCNumber) {
+            NSNumber *value = [aDecoder decodeObjectForKey:propertyMeta->_name];
+            if ([value isKindOfClass:[NSNumber class]]) {
+                ModelSetNumberToProperty(self, value, propertyMeta);
+                [value class];
+            }
+        }else {
+            WSEncodingType type = propertyMeta->_type & WSEncodingTypeMask;
+            switch (type) {
+                case WSEncodingTypeObject: {
+                    id value = [aDecoder decodeObjectForKey:propertyMeta->_name];
+                    ((void (*)(id, SEL, id))objc_msgSend)((id)self, propertyMeta->_setter, value);
+                }   break;
+                case WSEncodingTypeSEL: {
+                    NSString *str = [aDecoder decodeObjectForKey:propertyMeta->_name];
+                    if ([str isKindOfClass:[NSString class]]) {
+                        SEL sel = NSSelectorFromString(str);
+                        ((void *(*)(id, SEL, SEL))objc_msgSend)((id)self, propertyMeta->_setter, sel);
+                    }
+                }   break;
+                case WSEncodingTypeStruct:
+                case WSEncodingTypeUnion: {
+                    if (propertyMeta->_isKVCCompatible) {
+                        @try {
+                            NSValue *value = [aDecoder decodeObjectForKey:propertyMeta->_name];
+                            if (value) [self setValue:value forKey:propertyMeta->_name];
+                        } @catch (NSException *exception) {}
+                    }
                 }   break;
                     
                 default:
@@ -1333,6 +1393,83 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
             }
         }
     }
+    return self;
+}
+
+- (instancetype)modelCopy {
+    if (self == (id)kCFNull) return self;
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:self.class];
+    if (modelMeta->_nsType) return [self copy];
+    
+    NSObject *one = [self.class new];
+    for (_WSModelPropertyMeta *propertyMeta in modelMeta->_allPropertyMetas) {
+        if (!propertyMeta->_getter && !propertyMeta->_setter) continue;
+        
+        if (propertyMeta->_isCNumber) {
+            switch (propertyMeta->_type & WSEncodingTypeMask) {
+                case WSEncodingTypeBool: {
+                    bool num = ((bool (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, bool))objc_msgSend)((id)one, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeInt8:
+                case WSEncodingTypeUInt8: {
+                    uint8_t num = ((bool (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, bool))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeInt16:
+                case WSEncodingTypeUInt16: {
+                    uint16_t num = ((uint16_t (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, uint16_t))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeInt32:
+                case WSEncodingTypeUInt32: {
+                    uint32_t num = ((uint32_t (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, uint32_t))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeInt64:
+                case WSEncodingTypeUInt64: {
+                    uint64_t num = ((uint64_t (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, uint64_t))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeFloat: {
+                    float num = ((float (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, float))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                case WSEncodingTypeDouble: {
+                    double num = ((float (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, double))objc_msgSend)((id)self, propertyMeta->_setter, num);
+                }   break;
+                    
+                default: break;
+            }
+        }else {
+            switch (propertyMeta->_type & WSEncodingTypeMask) {
+                case WSEncodingTypeObject:
+                case WSEncodingTypeClass:
+                case WSEncodingTypeBlock: {
+                    id value = ((id (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, id))objc_msgSend)((id)self, propertyMeta->_setter, value);
+                }   break;
+                case WSEncodingTypeSEL:
+                case WSEncodingTypePointer:
+                case WSEncodingTypeCString: {
+                    size_t value = ((size_t (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    ((void (*)(id, SEL, size_t))objc_msgSend)((id)self, propertyMeta->_setter, value);
+                }   break;
+                case WSEncodingTypeStruct:
+                case WSEncodingTypeUnion: {
+                    @try {
+                        NSValue *value = [self valueForKey:NSStringFromSelector(propertyMeta->_getter)];
+                        if (value) {
+                            [one setValue:value forKey:propertyMeta->_name];
+                        }
+                    } @catch (NSException *exception) {}
+                }
+                default: break;
+            }
+        }
+    }
+    return one;
 }
 
 @end
