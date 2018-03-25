@@ -122,16 +122,40 @@ static void ContainerObjectExample() {
 
 @implementation WSMessage
 
-+ (instancetype)modelCustomPropertyMapper {
++ (NSDictionary *)modelCustomPropertyMapper {
     return @{@"messageId": @"i",
              @"content": @"c",
              @"time": @"t",};
 }
 
 - (BOOL)modelCustomTransformFromDictionary:(NSDictionary *)dic {
-    uint64_t timestamp = [dic]
+    uint64_t timestamp = [dic unsignedLongLongValueForKey:@"t" default:0];
+    self.time = [NSDate dateWithTimeIntervalSince1970:timestamp / 1000];
+    return true;
 }
 
+- (void)modelCustomTransformToDictionary:(NSMutableDictionary *)dic {
+    dic[@"t"] = @([self.time timeIntervalSince1970] * 1000).description;
+}
+@end
+
+static void CustomMapperExample() {
+    WSMessage *message = [WSMessage modelWithJson:@"{\"i\":\"2000000001\",\"c\":\"Hello\",\"t\":\"1437237598000\"}"];
+    NSString *messageJson = [message modelToJSONString];
+    NSLog(@"message: %@", messageJson);
+}
+
+#pragma mark - Coding/Coping/hash/equal Example
+@interface WSShadow: NSObject<NSCoding, NSCopying>
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, assign) CGSize size;
+@property (nonatomic, strong) UIColor *color;
+@end
+
+@implementation WSShadow
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    
+}
 @end
 
 
@@ -145,7 +169,8 @@ static void ContainerObjectExample() {
     [super viewDidLoad];
 //    SimpleObjectExample();
 //    NextObjectExample();
-    ContainerObjectExample();
+//    ContainerObjectExample();
+//    CustomMapperExample();
 }
 
 - (void)didReceiveMemoryWarning {

@@ -1182,8 +1182,10 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
     }];
     
     if (modelMeta->_hasCustomTransformToDictionary) {
-        BOOL suc = [((id<WSModel>)model) modelCustomTransformToDictionary:dic];
-        if (!suc) return nil;
+        [((id<WSModel>)model) modelCustomTransformToDictionary:dic];
+        //???好像是写错了?
+//        BOOL suc = [((id<WSModel>)model) modelCustomTransformToDictionary:dic];
+//        if (!suc) return nil;
     }
     return result;
 }
@@ -1289,6 +1291,48 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
     NSData *jsonData = [self modelToJSONData];
     if (jsonData.length == 0) return nil;
     return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+}
+
+- (void)modelEncodeWithCoder:(NSCoder *)aCoder {
+    if (!aCoder) return;
+    if (self == (id)kCFNull) {
+        [((id<NSCoding>)self) encodeWithCoder:aCoder];
+        return;
+    }
+    
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:self.class];
+    if (modelMeta->_nsType) {
+        [((id<NSCoding>)self) encodeWithCoder:aCoder];
+        return;
+    }
+    
+    for (_WSModelPropertyMeta *propertyMeta in modelMeta->_allPropertyMetas) {
+        if (!propertyMeta->_getter) return;
+        
+        if (propertyMeta->_isCNumber) {
+            NSNumber *value = ModelCreateNumberFromProperty(self, propertyMeta);
+            if (value != nil) [aCoder encodeObject:value forKey:propertyMeta->_name];
+        }else {
+            switch (propertyMeta->_type & WSEncodingTypeMask) {
+                case WSEncodingTypeObject:{
+                    id value = ((id (*)(id, SEL))objc_msgSend)((id)self, propertyMeta->_getter);
+                    if (value && (propertyMeta->_nsType || [value respondsToSelector:@selector(encodeObject:forKey:)])) {
+                        if ([value isKindOfClass:[NSValue class]]) {///??? nsvalue 包含了什么
+                            if ([value isKindOfClass:[NSNumber class]]) {
+                                [aCoder encodeObject:value forKey:propertyMeta->_name];
+                            }
+                        }else {
+                            [aCoder encodeObject:value forKey:propertyMeta->_name];
+                        }
+                    }
+
+                }   break;
+                    
+                default:
+                    break;
+            }
+        }
+    }
 }
 
 @end

@@ -9,3 +9,4 @@
 #import <Foundation/Foundation.h>
 
 #import "NSObject+WSModel.h"
+#import "NSDictionary+WSAdd.h"
