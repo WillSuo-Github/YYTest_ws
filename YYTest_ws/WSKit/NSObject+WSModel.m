@@ -1472,4 +1472,20 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
     return one;
 }
 
+- (NSUInteger)modelHash {
+    if (self == (id)kCFNull) return [self hash];
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:self.class];
+    if (modelMeta->_nsType) return [self hash];
+    
+    NSUInteger value = 0;
+    NSUInteger count = 0;
+    for (_WSModelPropertyMeta *propertyMeta in modelMeta->_allPropertyMetas) {
+        if (!propertyMeta->_isKVCCompatible) continue;
+        value ^= [[self valueForKey:NSStringFromSelector(propertyMeta->_getter)] hash];
+        count++;
+    }
+    if (count == 0) value = (long)((__bridge void *)self);
+    return value;
+}
+
 @end
