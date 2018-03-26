@@ -44,6 +44,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)modelInitWithCoder:(NSCoder *)aDecoder;
 
 - (instancetype)modelCopy;
+
+- (NSUInteger)modelHash;
 @end
 
 NS_ASSUME_NONNULL_END

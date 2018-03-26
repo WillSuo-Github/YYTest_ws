@@ -158,12 +158,19 @@ static void CustomMapperExample() {
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
-    [self modelInitWithCoder:aDecoder];
+    return [self modelInitWithCoder:aDecoder];
 }
 
 - (id)copyWithZone:(NSZone *)zone {
-    
+    return [self modelCopy];
 }
+
+- (NSUInteger)hash {
+    return [self modelHash];
+}
+
+
+
 @end
 
 
