@@ -46,6 +46,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)modelCopy;
 
 - (NSUInteger)modelHash;
+
+- (BOOL)modelIsEqual:(id)model;
 @end
 
 NS_ASSUME_NONNULL_END

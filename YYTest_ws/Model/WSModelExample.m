@@ -169,9 +169,21 @@ static void CustomMapperExample() {
     return [self modelHash];
 }
 
-
-
+- (BOOL)isEqual:(id)object {
+    return [self modelIsEqual:object];
+}
 @end
+
+static void CodingCopyingHashEqualExample() {
+    WSShadow *shadow = [[WSShadow alloc] init];
+    shadow.name = @"test";
+    shadow.size = CGSizeMake(10, 0);
+    shadow.color = [UIColor blueColor];
+    
+    WSShadow *shadow2 = [WSShadow new];
+    BOOL isEqual = [shadow isEqual:shadow2];
+    NSLog(@"shadow equals: %@", isEqual ? @"true": @"false");
+}
 
 
 @interface WSModelExample ()
@@ -186,6 +198,7 @@ static void CustomMapperExample() {
 //    NextObjectExample();
 //    ContainerObjectExample();
 //    CustomMapperExample();
+    CodingCopyingHashEqualExample();
 }
 
 - (void)didReceiveMemoryWarning {
