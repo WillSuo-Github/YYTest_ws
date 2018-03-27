@@ -19,6 +19,12 @@
 		8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E520236E2800994329 /* NSObject+WSModel.m */; };
 		8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E82025AA5C00994329 /* WSClassInfo.m */; };
 		8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */; };
+		8ACE9FAE206A9AB2007B9108 /* WSImageExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */; };
+		8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */; };
+		8ACE9FB5206A9D13007B9108 /* UIDevice+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB4206A9D13007B9108 /* UIDevice+WSAdd.m */; };
+		8ACE9FB8206A9E17007B9108 /* UIView+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB7206A9E17007B9108 /* UIView+WSAdd.m */; };
+		8ACE9FBC206AA022007B9108 /* WSImage.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FBB206AA022007B9108 /* WSImage.m */; };
+		8ACE9FBF206AA11E007B9108 /* NSBundle+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FBE206AA11E007B9108 /* NSBundle+WSAdd.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +69,18 @@
 		8A0252E82025AA5C00994329 /* WSClassInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSClassInfo.m; sourceTree = "<group>"; };
 		8A0FE94520640D200046B2CF /* NSDictionary+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSDictionary+WSAdd.h"; sourceTree = "<group>"; };
 		8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSDictionary+WSAdd.m"; sourceTree = "<group>"; };
+		8ACE9FAC206A9AB2007B9108 /* WSImageExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageExample.h; sourceTree = "<group>"; };
+		8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImageExample.m; sourceTree = "<group>"; };
+		8ACE9FAF206A9BA5007B9108 /* WSImageDisplayExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageDisplayExample.h; sourceTree = "<group>"; };
+		8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImageDisplayExample.m; sourceTree = "<group>"; };
+		8ACE9FB3206A9D13007B9108 /* UIDevice+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIDevice+WSAdd.h"; sourceTree = "<group>"; };
+		8ACE9FB4206A9D13007B9108 /* UIDevice+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIDevice+WSAdd.m"; sourceTree = "<group>"; };
+		8ACE9FB6206A9E17007B9108 /* UIView+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIView+WSAdd.h"; sourceTree = "<group>"; };
+		8ACE9FB7206A9E17007B9108 /* UIView+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIView+WSAdd.m"; sourceTree = "<group>"; };
+		8ACE9FBA206AA022007B9108 /* WSImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImage.h; sourceTree = "<group>"; };
+		8ACE9FBB206AA022007B9108 /* WSImage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImage.m; sourceTree = "<group>"; };
+		8ACE9FBD206AA11E007B9108 /* NSBundle+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSBundle+WSAdd.h"; sourceTree = "<group>"; };
+		8ACE9FBE206AA11E007B9108 /* NSBundle+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSBundle+WSAdd.m"; sourceTree = "<group>"; };
 		AFEB8907204114320041E4E6 /* WSKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSKit.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -118,6 +136,7 @@
 				8A0252A62023679700994329 /* AppDelegate.m */,
 				8A0252D72023680100994329 /* RootViewController.h */,
 				8A0252D82023680100994329 /* RootViewController.m */,
+				8ACE9FAB206A9A75007B9108 /* Image */,
 				8A0252E320236DFC00994329 /* WSKit */,
 				8A0252DA20236A6A00994329 /* Model */,
 				8A0252DB20236A7400994329 /* Other */,
@@ -167,6 +186,7 @@
 		8A0252E320236DFC00994329 /* WSKit */ = {
 			isa = PBXGroup;
 			children = (
+				8ACE9FB9206AA00D007B9108 /* Image */,
 				8A0FE94320640CF70046B2CF /* Base */,
 				8A0252E420236E2800994329 /* NSObject+WSModel.h */,
 				8A0252E520236E2800994329 /* NSObject+WSModel.m */,
@@ -180,6 +200,7 @@
 		8A0FE94320640CF70046B2CF /* Base */ = {
 			isa = PBXGroup;
 			children = (
+				8ACE9FB2206A9CF5007B9108 /* UIKit */,
 				8A0FE94420640CFF0046B2CF /* Foundation */,
 			);
 			path = Base;
@@ -190,8 +211,41 @@
 			children = (
 				8A0FE94520640D200046B2CF /* NSDictionary+WSAdd.h */,
 				8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */,
+				8ACE9FBD206AA11E007B9108 /* NSBundle+WSAdd.h */,
+				8ACE9FBE206AA11E007B9108 /* NSBundle+WSAdd.m */,
 			);
 			path = Foundation;
+			sourceTree = "<group>";
+		};
+		8ACE9FAB206A9A75007B9108 /* Image */ = {
+			isa = PBXGroup;
+			children = (
+				8ACE9FAC206A9AB2007B9108 /* WSImageExample.h */,
+				8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */,
+				8ACE9FAF206A9BA5007B9108 /* WSImageDisplayExample.h */,
+				8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */,
+			);
+			path = Image;
+			sourceTree = "<group>";
+		};
+		8ACE9FB2206A9CF5007B9108 /* UIKit */ = {
+			isa = PBXGroup;
+			children = (
+				8ACE9FB3206A9D13007B9108 /* UIDevice+WSAdd.h */,
+				8ACE9FB4206A9D13007B9108 /* UIDevice+WSAdd.m */,
+				8ACE9FB6206A9E17007B9108 /* UIView+WSAdd.h */,
+				8ACE9FB7206A9E17007B9108 /* UIView+WSAdd.m */,
+			);
+			path = UIKit;
+			sourceTree = "<group>";
+		};
+		8ACE9FB9206AA00D007B9108 /* Image */ = {
+			isa = PBXGroup;
+			children = (
+				8ACE9FBA206AA022007B9108 /* WSImage.h */,
+				8ACE9FBB206AA022007B9108 /* WSImage.m */,
+			);
+			path = Image;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -330,8 +384,14 @@
 				8A0252B52023679700994329 /* main.m in Sources */,
 				8A0252A72023679700994329 /* AppDelegate.m in Sources */,
 				8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */,
+				8ACE9FBF206AA11E007B9108 /* NSBundle+WSAdd.m in Sources */,
 				8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */,
+				8ACE9FB8206A9E17007B9108 /* UIView+WSAdd.m in Sources */,
+				8ACE9FAE206A9AB2007B9108 /* WSImageExample.m in Sources */,
 				8A0252E120236ADF00994329 /* WSModelExample.m in Sources */,
+				8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */,
+				8ACE9FB5206A9D13007B9108 /* UIDevice+WSAdd.m in Sources */,
+				8ACE9FBC206AA022007B9108 /* WSImage.m in Sources */,
 				8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */,
 				8A0252D92023680100994329 /* RootViewController.m in Sources */,
 			);

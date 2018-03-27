@@ -10,3 +10,5 @@
 
 #import "NSObject+WSModel.h"
 #import "NSDictionary+WSAdd.h"
+#import "UIDevice+WSAdd.h"
+#import "UIView+WSAdd.h"

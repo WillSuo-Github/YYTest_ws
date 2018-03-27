@@ -39,6 +39,7 @@
 
 - (void)configSourceData {
     [self addCell:@"model" className:@"WSModelExample"];
+    [self addCell:@"image" className:@"WSImageExample"];
     
     [_tableView reloadData];
 }
