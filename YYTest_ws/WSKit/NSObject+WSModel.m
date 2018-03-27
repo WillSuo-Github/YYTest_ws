@@ -1488,4 +1488,22 @@ static id ModelToJSONObjectRecursive(NSObject *model) {
     return value;
 }
 
+- (BOOL)modelIsEqual:(id)model {
+    if (self == model) return true;
+    if (![model isMemberOfClass:self.class]) return false;
+    _WSModelMeta *modelMeta = [_WSModelMeta metaWithClass:self.class];
+    if (modelMeta->_nsType) return [self isEqual:model];
+    if ([self hash] != [model hash]) return false;
+    
+    for (_WSModelPropertyMeta *propertyMeta in modelMeta->_allPropertyMetas) {
+        if (!propertyMeta->_isKVCCompatible) continue;
+        id this = [self valueForKey:NSStringFromSelector(propertyMeta->_getter)];
+        id that = [model valueForKey:NSStringFromSelector(propertyMeta->_getter)];
+        if (this == that) continue;
+        if (this == nil || that == nil) return false;
+        if (![this isEqual:that]) return false;
+    }
+    return true;
+}
+
 @end
