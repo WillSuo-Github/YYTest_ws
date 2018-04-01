@@ -12,3 +12,13 @@
 #import "NSDictionary+WSAdd.h"
 #import "UIDevice+WSAdd.h"
 #import "UIView+WSAdd.h"
+#import "NSBundle+WSAdd.h"
+#import "NSString+WSAdd.h"
+#import "UIGestureRecognizer+WSAdd.h"
+
+#import "CALayer+WSAdd.h"
+
+#import "WSImage.h"
+#import "WSAnimationImageView.h"
+
+#import "WSKitMacro.h"

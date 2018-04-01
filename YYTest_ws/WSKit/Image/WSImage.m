@@ -7,6 +7,7 @@
 //
 
 #import "WSImage.h"
+#import "WSKit.h"
 
 @implementation WSImage
 
@@ -20,6 +21,21 @@
     CGFloat scale = 1;
     
     NSArray *exts = ext.length > 0 ? @[ext] : @[@"", @"png", @"jpeg", @"jpg", @"gif", @"webp", @"apng"];
-    NSArray *scales = [NSBundle preferr]
+    NSArray *scales = [NSBundle preferredScales];
+    for (unsigned int s = 0; s < scales.count; s ++) {
+        scale = ((NSNumber *)scales[s]).floatValue;
+        NSString *scaleName = [res stringByAppendingNameScale:scale];
+        for (NSString *e in exts) {
+            path = [[NSBundle mainBundle] pathForResource:scaleName ofType:e];
+            if (path) break;
+        }
+        if (path) break;
+    }
+    if (path.length == 0) return nil;
+    
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (data.length == 0) return nil;
+    
+    return [[self alloc] initWithData:data scale:scale];
 }
 @end

@@ -8,8 +8,9 @@
 
 #import "WSImageDisplayExample.h"
 #import "WSKit.h"
+#import "WSImageExampleHelper.h"
 
-@interface WSImageDisplayExample ()
+@interface WSImageDisplayExample ()<UIGestureRecognizerDelegate>
 
 @end
 
@@ -36,13 +37,39 @@
     label.numberOfLines = 0;
     label.text = @"Tap the image to pause/paly\n Slide on the image to forward/rewind";
     [_scrollView addSubview:label];
+
+    [self addImageWithName:@"niconiconi" text:@"Animated gif"];
     
-    
-    
+    _scrollView.panGestureRecognizer.cancelsTouchesInView = true;
 }
 
 - (void)addImageWithName:(NSString *)name text:(NSString *)text {
+    WSImage *image = [WSImage imageNamed:name];
+    [self addImage:image size:CGSizeZero text:text];
+}
+
+- (void)addImage:(UIImage *)image size:(CGSize)size text:(NSString *)text {
+    WSAnimationImageView *imageView = [[WSAnimationImageView alloc] initWithImage:image];
     
+    if (size.width > 0 && size.height > 0) imageView.size = size;
+    imageView.centerX = self.view.width / 2;
+    imageView.top = [(UIView *)[_scrollView.subviews lastObject] bottom] + 30;
+    [_scrollView addSubview:imageView];
+    [WSImageExampleHelper addTapControlToAnimationedImageView:imageView];
+    [WSImageExampleHelper addPanControlToAnimationedImageView:imageView];
+    for (UIGestureRecognizer *g in imageView.gestureRecognizers) {
+        g.delegate = self;
+    }
+    
+    UILabel *imageLabel = [UILabel new];
+    imageLabel.backgroundColor = [UIColor clearColor];
+    imageLabel.frame = CGRectMake(0, 0, self.view.width, 20);
+    imageLabel.top = imageView.bottom + 10;
+    imageLabel.textAlignment = NSTextAlignmentCenter;
+    imageLabel.text = text;
+    [_scrollView addSubview:imageLabel];
+    
+    _scrollView.contentSize = CGSizeMake(self.view.width, imageLabel.bottom + 20);
 }
 
 - (void)didReceiveMemoryWarning {

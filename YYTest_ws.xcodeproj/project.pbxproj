@@ -19,6 +19,11 @@
 		8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E520236E2800994329 /* NSObject+WSModel.m */; };
 		8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0252E82025AA5C00994329 /* WSClassInfo.m */; };
 		8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */; };
+		8AAD97ED206F479800A1DD46 /* NSString+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97EC206F479800A1DD46 /* NSString+WSAdd.m */; };
+		8AAD97F0206F54CE00A1DD46 /* WSAnimationImageView.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97EF206F54CE00A1DD46 /* WSAnimationImageView.m */; };
+		8AAD97F3206F567C00A1DD46 /* WSImageExampleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F2206F567C00A1DD46 /* WSImageExampleHelper.m */; };
+		8AAD97F6206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F5206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m */; };
+		8AAD97FA206F5BCF00A1DD46 /* CALayer+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F9206F5BCF00A1DD46 /* CALayer+WSAdd.m */; };
 		8ACE9FAE206A9AB2007B9108 /* WSImageExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */; };
 		8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */; };
 		8ACE9FB5206A9D13007B9108 /* UIDevice+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB4206A9D13007B9108 /* UIDevice+WSAdd.m */; };
@@ -69,6 +74,17 @@
 		8A0252E82025AA5C00994329 /* WSClassInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSClassInfo.m; sourceTree = "<group>"; };
 		8A0FE94520640D200046B2CF /* NSDictionary+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSDictionary+WSAdd.h"; sourceTree = "<group>"; };
 		8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSDictionary+WSAdd.m"; sourceTree = "<group>"; };
+		8AAD97EB206F479800A1DD46 /* NSString+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSString+WSAdd.h"; sourceTree = "<group>"; };
+		8AAD97EC206F479800A1DD46 /* NSString+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSString+WSAdd.m"; sourceTree = "<group>"; };
+		8AAD97EE206F54CE00A1DD46 /* WSAnimationImageView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSAnimationImageView.h; sourceTree = "<group>"; };
+		8AAD97EF206F54CE00A1DD46 /* WSAnimationImageView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSAnimationImageView.m; sourceTree = "<group>"; };
+		8AAD97F1206F567C00A1DD46 /* WSImageExampleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageExampleHelper.h; sourceTree = "<group>"; };
+		8AAD97F2206F567C00A1DD46 /* WSImageExampleHelper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImageExampleHelper.m; sourceTree = "<group>"; };
+		8AAD97F4206F574900A1DD46 /* UIGestureRecognizer+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIGestureRecognizer+WSAdd.h"; sourceTree = "<group>"; };
+		8AAD97F5206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIGestureRecognizer+WSAdd.m"; sourceTree = "<group>"; };
+		8AAD97F8206F5BCF00A1DD46 /* CALayer+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CALayer+WSAdd.h"; sourceTree = "<group>"; };
+		8AAD97F9206F5BCF00A1DD46 /* CALayer+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "CALayer+WSAdd.m"; sourceTree = "<group>"; };
+		8AAD97FB206F5FB200A1DD46 /* WSKitMacro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSKitMacro.h; sourceTree = "<group>"; };
 		8ACE9FAC206A9AB2007B9108 /* WSImageExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageExample.h; sourceTree = "<group>"; };
 		8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImageExample.m; sourceTree = "<group>"; };
 		8ACE9FAF206A9BA5007B9108 /* WSImageDisplayExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageDisplayExample.h; sourceTree = "<group>"; };
@@ -192,6 +208,7 @@
 				8A0252E520236E2800994329 /* NSObject+WSModel.m */,
 				8A0252E72025AA5C00994329 /* WSClassInfo.h */,
 				8A0252E82025AA5C00994329 /* WSClassInfo.m */,
+				8AAD97FB206F5FB200A1DD46 /* WSKitMacro.h */,
 				AFEB8907204114320041E4E6 /* WSKit.h */,
 			);
 			path = WSKit;
@@ -200,6 +217,7 @@
 		8A0FE94320640CF70046B2CF /* Base */ = {
 			isa = PBXGroup;
 			children = (
+				8AAD97F7206F5BB700A1DD46 /* Quartz */,
 				8ACE9FB2206A9CF5007B9108 /* UIKit */,
 				8A0FE94420640CFF0046B2CF /* Foundation */,
 			);
@@ -213,8 +231,19 @@
 				8A0FE94620640D200046B2CF /* NSDictionary+WSAdd.m */,
 				8ACE9FBD206AA11E007B9108 /* NSBundle+WSAdd.h */,
 				8ACE9FBE206AA11E007B9108 /* NSBundle+WSAdd.m */,
+				8AAD97EB206F479800A1DD46 /* NSString+WSAdd.h */,
+				8AAD97EC206F479800A1DD46 /* NSString+WSAdd.m */,
 			);
 			path = Foundation;
+			sourceTree = "<group>";
+		};
+		8AAD97F7206F5BB700A1DD46 /* Quartz */ = {
+			isa = PBXGroup;
+			children = (
+				8AAD97F8206F5BCF00A1DD46 /* CALayer+WSAdd.h */,
+				8AAD97F9206F5BCF00A1DD46 /* CALayer+WSAdd.m */,
+			);
+			path = Quartz;
 			sourceTree = "<group>";
 		};
 		8ACE9FAB206A9A75007B9108 /* Image */ = {
@@ -224,6 +253,8 @@
 				8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */,
 				8ACE9FAF206A9BA5007B9108 /* WSImageDisplayExample.h */,
 				8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */,
+				8AAD97F1206F567C00A1DD46 /* WSImageExampleHelper.h */,
+				8AAD97F2206F567C00A1DD46 /* WSImageExampleHelper.m */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -235,6 +266,8 @@
 				8ACE9FB4206A9D13007B9108 /* UIDevice+WSAdd.m */,
 				8ACE9FB6206A9E17007B9108 /* UIView+WSAdd.h */,
 				8ACE9FB7206A9E17007B9108 /* UIView+WSAdd.m */,
+				8AAD97F4206F574900A1DD46 /* UIGestureRecognizer+WSAdd.h */,
+				8AAD97F5206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m */,
 			);
 			path = UIKit;
 			sourceTree = "<group>";
@@ -244,6 +277,8 @@
 			children = (
 				8ACE9FBA206AA022007B9108 /* WSImage.h */,
 				8ACE9FBB206AA022007B9108 /* WSImage.m */,
+				8AAD97EE206F54CE00A1DD46 /* WSAnimationImageView.h */,
+				8AAD97EF206F54CE00A1DD46 /* WSAnimationImageView.m */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -384,14 +419,19 @@
 				8A0252B52023679700994329 /* main.m in Sources */,
 				8A0252A72023679700994329 /* AppDelegate.m in Sources */,
 				8A0FE94720640D200046B2CF /* NSDictionary+WSAdd.m in Sources */,
+				8AAD97ED206F479800A1DD46 /* NSString+WSAdd.m in Sources */,
 				8ACE9FBF206AA11E007B9108 /* NSBundle+WSAdd.m in Sources */,
 				8A0252E92025AA5C00994329 /* WSClassInfo.m in Sources */,
 				8ACE9FB8206A9E17007B9108 /* UIView+WSAdd.m in Sources */,
 				8ACE9FAE206A9AB2007B9108 /* WSImageExample.m in Sources */,
 				8A0252E120236ADF00994329 /* WSModelExample.m in Sources */,
 				8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */,
+				8AAD97F6206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m in Sources */,
+				8AAD97F3206F567C00A1DD46 /* WSImageExampleHelper.m in Sources */,
 				8ACE9FB5206A9D13007B9108 /* UIDevice+WSAdd.m in Sources */,
 				8ACE9FBC206AA022007B9108 /* WSImage.m in Sources */,
+				8AAD97F0206F54CE00A1DD46 /* WSAnimationImageView.m in Sources */,
+				8AAD97FA206F5BCF00A1DD46 /* CALayer+WSAdd.m in Sources */,
 				8A0252E620236E2800994329 /* NSObject+WSModel.m in Sources */,
 				8A0252D92023680100994329 /* RootViewController.m in Sources */,
 			);
@@ -556,7 +596,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = YYTest_ws/Other/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "WS.YYTest-ws";
@@ -569,7 +611,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				INFOPLIST_FILE = YYTest_ws/Other/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "WS.YYTest-ws";
