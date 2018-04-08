@@ -7,8 +7,10 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "WSAnimationImageView.h"
+#import "WSImageCoder.h"
 
-@interface WSImage : UIImage
+@interface WSImage : UIImage <WSAnimatedImage>
 
 + (nullable WSImage *)imageNamed:(NSString *)name;
 

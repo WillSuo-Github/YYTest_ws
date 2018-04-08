@@ -31,6 +31,24 @@ static inline void dispatch_async_on_main_queue(void(^block)(void)) {
     }
 }
 
+static inline void pthread_mutex_init_recursive(pthread_mutex_t *mutex, bool recursive) {
+#define WSMUTEX_ASSERT_ON_ERROR(x_) do { \
+__unused volatile int res = (x_); \
+assert(res = 0); \
+} while (0)
+    assert(mutex != NULL);
+    if (!recursive) {
+        WSMUTEX_ASSERT_ON_ERROR(pthread_mutex_init(mutex, NULL));
+    } else {
+        pthread_mutexattr_t attr;
+        WSMUTEX_ASSERT_ON_ERROR(pthread_mutexattr_init(&attr));
+        WSMUTEX_ASSERT_ON_ERROR(pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE));
+        WSMUTEX_ASSERT_ON_ERROR(pthread_mutex_init(mutex, &attr));
+        WSMUTEX_ASSERT_ON_ERROR(pthread_mutexattr_destroy(&attr));
+    }
+#undef WSMUTEX_ASSERT_ON_ERROR
+}
+
 
 WS_EXTERN_C_END
 

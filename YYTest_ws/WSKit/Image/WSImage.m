@@ -9,7 +9,12 @@
 #import "WSImage.h"
 #import "WSKit.h"
 
-@implementation WSImage
+@implementation WSImage {
+    WSImageDecoder *_decoder;
+    NSArray *_preloadedFrames;
+    dispatch_semaphore_t _preloadedLock;
+    NSUInteger _bytesPerFrame;
+}
 
 + (WSImage *)imageNamed:(NSString *)name {
     if (name.length == 0) return nil;
@@ -38,4 +43,27 @@
     
     return [[self alloc] initWithData:data scale:scale];
 }
+
+#pragma mark - protocol WSAnimatedImage
+- (NSUInteger)animateImageFrameCount {
+    return _decoder.frameCount;
+}
+
+- (NSUInteger)animatedImageLoopCount {
+    return _decoder.loopCount;
+}
+
+- (NSUInteger)animatedImageBytesPerFrame {
+    return _bytesPerFrame;
+}
+
+- (UIImage *)animatedImageFrameAtIndex:(NSUInteger)index {
+    if (index >= _decoder.frameCount) return nil;
+    dispatch_semaphore_wait(_preloadedLock, DISPATCH_TIME_FOREVER);
+    UIImage *image = _preloadedFrames[index];
+    dispatch_semaphore_signal(_preloadedLock);
+    if (image) return image == (id)[NSNull null] ? nil : image;
+    return [_decoder ]
+}
+
 @end

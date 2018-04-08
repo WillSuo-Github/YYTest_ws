@@ -22,3 +22,4 @@
 #import "WSAnimationImageView.h"
 
 #import "WSKitMacro.h"
+#import "WSWeakProxy.h"

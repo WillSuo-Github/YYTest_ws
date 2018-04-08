@@ -22,8 +22,15 @@
 @required
 - (NSUInteger)animateImageFrameCount;
 
+- (NSUInteger)animatedImageLoopCount;
+
+- (NSUInteger)animatedImageBytesPerFrame;
+
 - (nullable UIImage *)animatedImageFrameAtIndex:(NSUInteger)index;
 
+- (NSTimeInterval)animatedImageDurationAtIndex:(NSUInteger)index;
+
+@optional
 - (CGRect)animatedImageContentsRectAtIndex:(NSUInteger)index;
 
 @end
