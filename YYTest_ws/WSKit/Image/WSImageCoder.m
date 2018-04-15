@@ -114,7 +114,7 @@ typedef struct {
     ws_png_chunk_info *chunks;
     uint32_t chunk_num;
     
-    ws_png_chunk_info *apng_frames;
+    ws_png_frame_info *apng_frames;
     uint32_t apng_frame_num;
     uint32_t apng_loop_num;
     
@@ -125,7 +125,15 @@ typedef struct {
     bool apng_first_frame_is_cover;
 } ws_png_info;
 
-
+static void ws_png_chunk_IHDR_write(ws_png_chunk_IHDR *IHDR, uint8_t *data) {
+    *((uint32_t *)(data)) = ws_swap_endian_uint32(IHDR->width);
+    *((uint32_t *)(data + 4)) = ws_swap_endian_uint32(IHDR->height);
+    data[8] = IHDR->bit_depth;
+    data[9] = IHDR->color_type;
+    data[10] = IHDR->compression_method;
+    data[11] = IHDR->filter_method;
+    data[12] = IHDR->interlace_method;
+}
 
 CGColorSpaceRef WSCGColorSpaceGetDeviceRGB() {
     static CGColorSpaceRef space;
@@ -134,6 +142,10 @@ CGColorSpaceRef WSCGColorSpaceGetDeviceRGB() {
         space = CGColorSpaceCreateDeviceRGB();
     });
     return space;
+}
+
+static void WSCGDataProviderReleaseDataCallBack(void *info, const void *data, size_t size) {
+    if (info) free(info);
 }
 
 CGImageRef WSCGImageCreateDecodedCopy(CGImageRef imageRef, BOOL decodeForDisplay) {
@@ -214,12 +226,33 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
                     *((uint32_t *)(frame_data + data_offset)) = ws_swap_endian_uint32(insert_chunk_info->length - 4);
                     *((uint32_t *)(frame_data + data_offset + 4)) = WS_FOUR_CC('I', 'd', 'A', 'T');
                     memcpy(frame_data + data_offset + 8, data + insert_chunk_info->offset + 12, insert_chunk_info->length - 4);
-                    
+                    uint32_t crc = (uint32_t)crc32(0, frame_data + data_offset + 4, insert_chunk_info->length);
+                    *((uint32_t *)(frame_data + data_offset + insert_chunk_info->length + 4)) = ws_swap_endian_uint32(crc);
+                    data_offset += insert_chunk_info->length + 8;
+                }else {
+                    memcpy(frame_data + data_offset, data + insert_chunk_info->offset, insert_chunk_info->length + 12);
+                    data_offset += insert_chunk_info->length + 12;
                 }
                 
             }
         }
+        
+        if (shared_chunk_info->fourcc == WS_FOUR_CC('I', 'H', 'D', 'R')) {
+            uint8_t tmp[25] = {0};
+            memcpy(tmp, data + shared_chunk_info->offset, 25);
+            ws_png_chunk_IHDR IHDR = info->header;
+            IHDR.width = frame_info->frame_control.width;
+            IHDR.height = frame_info->frame_control.height;
+            ws_png_chunk_IHDR_write(&IHDR, tmp + 8);
+            *((uint32_t *)(tmp + 21)) = ws_swap_endian_uint32((uint32_t)crc32(0, tmp + 4, 17));
+            memcpy(frame_data + data_offset, tmp, 25);
+            data_offset += 25;
+        }else {
+            memcpy(frame_data + data_offset, data + shared_chunk_info->offset, shared_chunk_info->length + 12);
+            data_offset += shared_chunk_info->length + 12;
+        }
     }
+    return frame_data;
 }
 
 
@@ -328,7 +361,29 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     
     if (_apngSource) {
         uint32_t size = 0;
-        uint8_t *bytes = ws_png_copy
+        uint8_t *bytes = ws_png_copy_frame_data_at_index(_data.bytes, _apngSource, (uint32_t)index, &size);
+        if (!bytes) return NULL;
+        CGDataProviderRef provider = CGDataProviderCreateWithData(bytes, bytes, size, WSCGDataProviderReleaseDataCallBack);
+        if (!provider) {
+            free(bytes);
+            return NULL;
+        }
+        bytes = NULL;
+        
+        CGImageSourceRef source = CGImageSourceCreateWithDataProvider(provider, NULL);
+        if (!source) {
+            CFRelease(provider);
+            return NULL;
+        }
+        CFRelease(provider);
+        
+        if (CGImageSourceGetCount(source) < 1) {
+            CFRelease(source);
+            return NULL;
+        }
+        
+        CGImageRef imageRef = CGImageSourceCreateImageAtIndex(source, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache: @(true)});
+        
     }
 }
 
