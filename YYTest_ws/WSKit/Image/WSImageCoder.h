@@ -66,4 +66,11 @@ typedef NS_ENUM(NSUInteger, WSImageBlendOperation) {
 @end
 
 
+#pragma mark - image
+@interface UIImage (WSImageCoder)
+
+@property (nonatomic) BOOL isDecodedForDisplay;
+@end
+
+
 NS_ASSUME_NONNULL_END

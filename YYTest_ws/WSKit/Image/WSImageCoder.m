@@ -148,6 +148,10 @@ static void WSCGDataProviderReleaseDataCallBack(void *info, const void *data, si
     if (info) free(info);
 }
 
+static inline size_t WSImageByteAlign(size_t size, size_t alignment) {
+    return ((size + (alignment - 1)) / alignment) * alignment;
+}
+
 CGImageRef WSCGImageCreateDecodedCopy(CGImageRef imageRef, BOOL decodeForDisplay) {
     if (!imageRef) return NULL;
     size_t width = CGImageGetWidth(imageRef);
@@ -282,9 +286,12 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     WebPDemuxer *_webpSource;
 #endif
     
+    UIImageOrientation _orientation;
     dispatch_semaphore_t _framesLock;
     NSArray *_frames;
     BOOL _needBlend;
+    NSUInteger _blendFrameIndex;
+    CGContextRef _blendCanvas;
 }
 
 - (instancetype)init {
@@ -319,7 +326,42 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     }
     
     if (!_needBlend) {
-        CGImageRef imageRef = [self _]
+        CGImageRef imageRef = [self _newUnblendedImageAtIndex:index extendToCanvas:extendToCanves decoded:&decoded];
+        if (!imageRef) return nil;
+        if (decodeFroDisplay && !decoded) {
+            CGImageRef imageRefDecoded = WSCGImageCreateDecodedCopy(imageRef, true);
+            if (imageRefDecoded) {
+                CFRelease(imageRef);
+                imageRef = imageRefDecoded;
+                decoded = true;
+            }
+        }
+        UIImage *image = [UIImage imageWithCGImage:imageRef scale:_scale orientation:_orientation];
+        CFRelease(imageRef);
+        if (!image) return nil;
+        image.isDecodedForDisplay = true;
+        frame.image = image;
+        return frame;
+    }
+    
+    //blend
+    if (![self _createBlendContextIfNeeded]) return nil;
+    CGImageRef imageRef = NULL;
+    
+    if (_blendFrameIndex + 1 == frame.index) {
+        imageRef = [self _newBlendedImageWithFrame:frame];
+        _blendFrameIndex = index;
+    }else {
+        _blendFrameIndex = NSNotFound;
+        CGContextClearRect(_blendCanvas, CGRectMake(0, 0, _width, _height));
+        
+        if (frame.blendFromIndex == frame.index) {
+            CGImageRef unblendedImage = [self _newUnblendedImageAtIndex:index extendToCanvas:false decoded:NULL];
+            if (unblendedImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendedImage);
+                CFRelease(unblendedImage)
+            }
+        }
     }
 }
 
@@ -383,8 +425,198 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
         }
         
         CGImageRef imageRef = CGImageSourceCreateImageAtIndex(source, 0, (CFDictionaryRef)@{(id)kCGImageSourceShouldCache: @(true)});
-        
+        CFRelease(source);
+        if (!imageRef) return NULL;
+        if (extendToCanvas) {
+            CGContextRef context = CGBitmapContextCreate(NULL, _width, _height, 8, 0, WSCGColorSpaceGetDeviceRGB(), kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst);
+            if (context) {
+                CGContextDrawImage(context, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), imageRef);
+                CFRelease(imageRef);
+                imageRef = CGBitmapContextCreateImage(context);
+                CFRelease(context);
+                if (decoded) *decoded = true;
+            }
+        }
+        return imageRef;
     }
+    
+#if WSIMAGE_WEBP_ENABLED
+    if (_webpSource) {
+        WebPIterator iter;
+        if (!WebPDemuxGetFrame(_webpSource, (int)(index + 1), &iter)) return NULL;
+        
+        int frameWidth = iter.width;
+        int frameHeight = iter.height;
+        if (frameWidth < 1 || frameHeight < 1) return NULL;
+        
+        int width = extendToCanvas ? (int)_width : frameWidth;
+        int height = extendToCanvas ? (int)_height : frameHeight;
+        if (width > _width || height > _height) return NULL;
+        
+        const uint8_t *payload = iter.fragment.bytes;
+        size_t payloadSize = iter.fragment.size;
+        
+        WebPDecoderConfig config;
+        if (!WebPInitDecoderConfig(&config)) {
+            WebPDemuxReleaseIterator(&iter);
+            return NULL;
+        }
+        if (WebPGetFeatures(payload, payloadSize, &config.input) != VP8_STATUS_OK) {
+            WebPDemuxReleaseIterator(&iter);
+            return NULL;
+        }
+        
+        size_t bitsPerComponent = 8;
+        size_t bitsPrePixel = 32;
+        size_t bytesPreRow = WSImageByteAlign(bitsPrePixel / 8 * width, 32);
+        size_t length = bytesPreRow * height;
+        CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst;
+        
+        void *pixels = calloc(1, length);
+        if (!pixels) {
+            WebPDemuxReleaseIterator(&iter);
+            return NULL;
+        }
+        
+        config.output.colorspace = MODE_bgrA;
+        config.output.is_external_memory = 1;
+        config.output.u.RGBA.rgba = pixels;
+        config.output.u.RGBA.stride = (int)bytesPreRow;
+        config.output.u.RGBA.size = length;
+        VP8StatusCode result = WebPDecode(payload, payloadSize, &config);
+        if ((result != VP8_STATUS_OK) && (result != VP8_STATUS_NOT_ENOUGH_DATA)) {
+            WebPDemuxReleaseIterator(&iter);
+            free(pixels);
+            return NULL;
+        }
+        WebPDemuxReleaseIterator(&iter);
+        
+        if (extendToCanvas && (iter.x_offset != 0 || iter.y_offset != 0)) {
+            void *tmp = calloc(1, length);
+            if (tmp) {
+                vImage_Buffer src = {pixels, height, width, bytesPreRow};
+                vImage_Buffer dest = {tmp, height, width, bytesPreRow};
+                vImage_CGAffineTransform transform = {1, 0, 0, 1, iter.x_offset, -iter.y_offset};
+                uint8_t backColor[4] = {0};
+                vImage_Error error = vImageAffineWarpCG_ARGB8888(&src, &dest, NULL, &transform, backColor, kvImageBackgroundColorFill);
+                if (error == kvImageNoError) {
+                    memcpy(pixels, tmp, length);
+                }
+                free(tmp);
+            }
+        }
+        
+        CGDataProviderRef provider = CGDataProviderCreateWithData(pixels, pixels, length, WSCGDataProviderReleaseDataCallBack);
+        if (!provider) {
+            free(pixels);
+            return NULL;
+        }
+        pixels = NULL;
+        
+        CGImageRef image = CGImageCreate(width, height, bitsPerComponent, bitsPrePixel, bytesPreRow, WSCGColorSpaceGetDeviceRGB(), bitmapInfo, provider, NULL, false, kCGRenderingIntentDefault);
+        CFRelease(provider);
+        if (decoded) *decoded = true;
+        return image;
+    }
+#endif
+    
+    return NULL;
+}
+
+- (BOOL)_createBlendContextIfNeeded {
+    if (!_blendCanvas) {
+        _blendFrameIndex = NSNotFound;
+        _blendCanvas = CGBitmapContextCreate(NULL, _width, _height, 8, 0, WSCGColorSpaceGetDeviceRGB(), kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst);
+    }
+    BOOL suc = _blendCanvas != NULL;
+    return suc;
+}
+
+- (CGImageRef)_newBlendedImageWithFrame:(_WSImageDecoderFrame *)frame CF_RETURNS_RETAINED{
+    CGImageRef imageRef = NULL;
+    if (frame.dispose == WSImageDisposePrevious) {
+        if (frame.blend == WSImageBlendOver) {
+            CGImageRef previousImage = CGBitmapContextCreateImage(_blendCanvas);
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:false decoded:NULL];
+            if (unblendImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+            CGContextClearRect(_blendCanvas, CGRectMake(0, 0, _width, _height));
+            if (previousImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(0, 0, _width, _height), previousImage);
+                CFRelease(previousImage);
+            }
+        }else {
+            CGImageRef previousImage = CGBitmapContextCreateImage(_blendCanvas);
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:false decoded:NULL];
+            if (unblendImage) {
+                CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, _width, _height));
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, _width, _height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+            CGContextClearRect(_blendCanvas, CGRectMake(0, 0, _width, _height));
+            if (previousImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(0, 0, _width, _height), previousImage);
+                CFRelease(previousImage);
+            }
+        }
+    }else if (frame.dispose == WSImageDisposeBackground) {
+        if (frame.blend == WSImageBlendOver) {
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:NO decoded:NULL];
+            if (unblendImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+            CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height));
+        } else {
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:NO decoded:NULL];
+            if (unblendImage) {
+                CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height));
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+            CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height));
+        }
+    }else {
+        if (frame.blend == WSImageBlendOver) {
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:NO decoded:NULL];
+            if (unblendImage) {
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+        } else {
+            CGImageRef unblendImage = [self _newUnblendedImageAtIndex:frame.index extendToCanvas:NO decoded:NULL];
+            if (unblendImage) {
+                CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height));
+                CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendImage);
+                CFRelease(unblendImage);
+            }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+        }
+    }
+    return imageRef;
 }
 
 @end
+
+#pragma mark - image
+@implementation UIImage (WSImageCoder)
+
+- (BOOL)isDecodedForDisplay {
+    if (self.images.count > 1) return true;
+    NSNumber *num = objc_getAssociatedObject(self, @selector(isDecodedForDisplay));
+    return [num boolValue];
+}
+
+- (void)setIsDecodedForDisplay:(BOOL)isDecodedForDisplay {
+    objc_setAssociatedObject(self, @selector(isDecodedForDisplay), @(isDecodedForDisplay), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+@end
+
