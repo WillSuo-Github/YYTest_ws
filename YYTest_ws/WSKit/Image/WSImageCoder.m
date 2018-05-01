@@ -199,6 +199,76 @@ CGImageRef WSCGImageCreateDecodedCopy(CGImageRef imageRef, BOOL decodeForDisplay
     }
 }
 
+WSImageType WSImageDetectType(CFDataRef data) {
+    if (!data) return WSImageTypeUnknow;
+    uint64_t lenght = CFDataGetLength(data);
+    if (lenght < 16) return WSImageTypeUnknow;///??? 为什么要16
+    
+    const char *bytes = (char *)CFDataGetBytePtr(data); ///???
+    
+    uint32_t magic4 = *((uint32_t *) bytes);
+    switch (magic4) {
+        case WS_FOUR_CC(0x4D, 0x4D, 0x00, 0x2A): {
+            return WSImageTypeTIFF;
+        }   break;
+         
+        case WS_FOUR_CC(0x49, 0x49, 0x2A, 0x00): {
+            return WSImageTypeTIFF;
+        }   break;
+            
+        case WS_FOUR_CC(0x00, 0x00, 0x01, 0x00): {
+            return WSImageTypeICO;
+        }   break;
+            
+        case WS_FOUR_CC(0x00, 0x00, 0x02, 0x00): {
+            return WSImageTypeICO;
+        }   break;
+            
+        case WS_FOUR_CC('i', 'c', 'n', 's'): {
+            return WSImageTypeICNS;
+        }   break;
+            
+        case WS_FOUR_CC('G', 'I', 'F', '8'): {
+            return WSImageTypeGIF;
+        }   break;
+            
+        case WS_FOUR_CC(0x89, 'P', 'N', 'G'): {
+            uint32_t tmp = *((uint32_t *)(bytes + 4));
+            if (tmp == WS_FOUR_CC('\r', '\n', 0x1A, '\n')) {
+                return WSImageTypePNG;
+            }
+        }   break;
+            
+        case WS_FOUR_CC('R', 'I', 'F', 'F'): {
+            uint32_t tmp = *((uint32_t *)(bytes + 8));
+            if (tmp == WS_FOUR_CC('W', 'E', 'B', 'P')) {
+                return WSImageTypeWebP;
+            }
+        }   break;
+    }
+    
+    uint16_t magic2 = *((uint16_t *)bytes);
+    switch (magic2) {
+        case WS_TWO_CC('B', 'A'):
+        case WS_TWO_CC('B', 'M'):
+        case WS_TWO_CC('I', 'C'):
+        case WS_TWO_CC('P', 'I'):
+        case WS_TWO_CC('C', 'I'):
+        case WS_TWO_CC('C', 'P'): { // BMP
+            return WSImageTypeBMP;
+        }
+        case WS_TWO_CC(0xFF, 0x4F): { // JPEG2000
+            return WSImageTypeJPEG2000;
+        }
+    }
+    
+    if (memcmp(bytes, "\377\330\377", 3) == 0) return WSImageTypeJPEG;
+    
+    if (memcmp(bytes + 4, "\152\120\040\040\015", 5) == 0) return WSImageTypeJPEG2000;
+    
+    return WSImageTypeUnknow;
+}
+
 static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
                                                 const ws_png_info *info,
                                                 const uint32_t index,
@@ -259,6 +329,52 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     return frame_data;
 }
 
+static void ws_png_info_release(ws_png_info *info) {
+    if (info) {
+        if (info->chunks) free(info->chunks);
+        if (info->apng_frames) free(info->apng_frames);
+        if (info->apng_shared_chunk_indexs) free(info->apng_shared_chunk_indexs);
+        free(info);
+    }
+}
+
+UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
+    switch (value) {
+        case kCGImagePropertyOrientationUp: return UIImageOrientationUp;
+        case kCGImagePropertyOrientationDown: return UIImageOrientationDown;
+        case kCGImagePropertyOrientationLeft: return UIImageOrientationLeft;
+        case kCGImagePropertyOrientationRight: return UIImageOrientationRight;
+        case kCGImagePropertyOrientationUpMirrored: return UIImageOrientationUpMirrored;
+        case kCGImagePropertyOrientationDownMirrored: return UIImageOrientationDownMirrored;
+        case kCGImagePropertyOrientationLeftMirrored: return UIImageOrientationLeftMirrored;
+        case kCGImagePropertyOrientationRightMirrored: return UIImageOrientationRightMirrored;
+        default: return UIImageOrientationUp;
+    }
+}
+
+
+@implementation WSImageFrame
++ (instancetype)frameWithImage:(UIImage *)image {
+    WSImageFrame *frame = [self new];
+    frame.image = image;
+    return frame;
+}
+
+- (id)copyWithZone:(NSZone *)zone {
+    WSImageFrame *frame = [self.class new];
+    frame.index = _index;
+    frame.width = _width;
+    frame.height = _height;
+    frame.offsetX = _offsetX;
+    frame.offsetY = _offsetY;
+    frame.duration = _duration;
+    frame.dispose = _dispose;
+    frame.blend = _blend;
+    frame.image = _image.copy;
+    return frame;
+}
+@end
+
 
 @interface _WSImageDecoderFrame: WSImageFrame
 @property (nonatomic, assign) BOOL hasAlpha;
@@ -294,8 +410,13 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     CGContextRef _blendCanvas;
 }
 
++ (instancetype)decoderWithData:(NSData *)data scale:(CGFloat)scale {
+    if (!data) return nil;
+    WSImageDecoder *decoder = [[WSImageDecoder alloc] initWithScale:scale];
+    decoder
+}
+
 - (instancetype)init {
-    self = [super init];
     return [self initWithScale:[UIScreen mainScreen].scale];
 }
 
@@ -308,13 +429,47 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     return self;
 }
 
+- (BOOL)updateData:(NSData *)data final:(BOOL)final {
+    BOOL result = false;
+    pthread_mutex_lock(&_lock);
+    result = [self _]
+}
+
 - (WSImageFrame *)frameAtIndex:(NSUInteger)index decodeForDisplay:(BOOL)decodeForDisplay {
     WSImageFrame *result = nil;
     pthread_mutex_lock(&_lock);
-    result = [self ]
+    result = [self _frameAtIndex:index decodeForDisplay:decodeForDisplay];
     pthread_mutex_unlock(&_lock);
+    return result;
 }
 
+- (NSTimeInterval)frameDurationAtIndex:(NSUInteger)index {
+    NSTimeInterval result = 0;
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    if (index < _frames.count) {
+        result = ((_WSImageDecoderFrame *)_frames[index]).duration;
+    }
+    dispatch_semaphore_signal(_framesLock);
+    return result;
+}
+
+#pragma mark -
+#pragma mark - private
+- (BOOL)_updateData:(NSData *)data final:(BOOL)final {
+    if (_finalized) return false;
+    if (data.length < _data.length) return false;
+    _finalized = final;
+    _data = data;
+    
+    WSImageType type = WSImageDetectType((__bridge CFDataRef)data);
+    if (_sourceTypeDetected) {
+        if (_type != type) {
+            return false;
+        }esle {
+            self
+        }
+    }
+}
 
 - (WSImageFrame *)_frameAtIndex:(NSUInteger)index decodeForDisplay:(BOOL)decodeFroDisplay {
     if (index >= _frames.count) return 0;
@@ -359,10 +514,41 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
             CGImageRef unblendedImage = [self _newUnblendedImageAtIndex:index extendToCanvas:false decoded:NULL];
             if (unblendedImage) {
                 CGContextDrawImage(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height), unblendedImage);
-                CFRelease(unblendedImage)
+                CFRelease(unblendedImage);
             }
+            imageRef = CGBitmapContextCreateImage(_blendCanvas);
+            if (frame.dispose == WSImageDisposeBackground) {
+                CGContextClearRect(_blendCanvas, CGRectMake(frame.offsetX, frame.offsetY, frame.width, frame.height));
+            }
+            _blendFrameIndex = index;
+        }else {
+            for (uint32_t i = (uint32_t)frame.blendFromIndex; i <= (uint32_t)frame.index; i++) {
+                if (i == frame.index) {
+                    if (!imageRef) imageRef = [self _newBlendedImageWithFrame:frame];
+                }else {
+                    [self _newBlendedImageWithFrame:_frames[i]];
+                }
+            }
+            _blendFrameIndex = index;
         }
     }
+    
+    if (!imageRef) return nil;
+    UIImage *image = [UIImage imageWithCGImage:imageRef scale:_scale orientation:_orientation];
+    CFRelease(imageRef);
+    if (!image) return nil;
+    
+    image.isDecodedForDisplay = true;
+    frame.image = image;
+    if (extendToCanves) {
+        frame.width = _width;
+        frame.height = _height;
+        frame.offsetX = 0;
+        frame.offsetY = 0;
+        frame.dispose = WSImageDisposeNone;
+        frame.blend = WSImageBlendNone;
+    }
+    return frame;
 }
 
 - (CGImageRef)_newUnblendedImageAtIndex:(NSUInteger)index
@@ -603,10 +789,227 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     return imageRef;
 }
 
+- (void)_updateSource {
+    switch (_type) {
+        case WSImageTypeWebP: {
+            
+        }   break;
+            
+        default:
+            break;
+    }
+}
+
+- (void)_updateSourceWebP {
+#if WSIMAGE_WEBP_ENABLED
+    _width = 0;
+    _height = 0;
+    _loopCount = 0;
+    if (_webpSource) WebPDemuxDelete(_webpSource);
+    _webpSource = NULL;
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    _frames = nil;
+    dispatch_semaphore_signal(_framesLock);
+    
+    WebPData webPData = {0};
+    webPData.bytes = _data.bytes;
+    webPData.size = _data.length;
+    WebPDemuxer *demuxer = WebPDemux(&webPData);
+    if (!demuxer) return;
+    
+    uint32_t webpFrameCount = WebPDemuxGetI(demuxer, WEBP_FF_FRAME_COUNT);
+    uint32_t webpLoopCount = WebPDemuxGetI(demuxer, WEBP_FF_LOOP_COUNT);
+    uint32_t canvasWidth = WebPDemuxGetI(demuxer, WEBP_FF_CANVAS_WIDTH);
+    uint32_t canvasHeight = WebPDemuxGetI(demuxer, WEBP_FF_CANVAS_HEIGHT);
+    if (webpFrameCount == 0 || canvasWidth < 1 || canvasHeight < 1) {
+        WebPDemuxDelete(demuxer);
+        return;
+    }
+    
+    NSMutableArray *frames = [NSMutableArray new];
+    BOOL needBlend = false;
+    uint32_t iterIndex = 0;
+    uint32_t lastBlendIndex = 0;
+    WebPIterator iter = {0};
+    if (WebPDemuxGetFrame(demuxer, 1, &iter)) {
+        do {
+            _WSImageDecoderFrame *frame = [_WSImageDecoderFrame new];
+            [frames addObject:frame];
+            if (iter.dispose_method == WEBP_MUX_DISPOSE_BACKGROUND) {
+                frame.dispose = WSImageDisposeBackground;
+            }
+            if (iter.blend_method == WEBP_MUX_BLEND) {
+                frame.blend = WSImageBlendOver;
+            }
+            
+            int canvasWidth = WebPDemuxGetI(demuxer, WEBP_FF_CANVAS_WIDTH);
+            int canvasHeight = WebPDemuxGetI(demuxer, WEBP_FF_CANVAS_HEIGHT);
+            frame.index = iterIndex;
+            frame.duration = iter.duration / 1000.0;
+            frame.width = iter.width;
+            frame.height = iter.height;
+            frame.hasAlpha = iter.has_alpha;
+            frame.blend = iter.blend_method == WEBP_MUX_BLEND;
+            frame.offsetX = iter.x_offset;
+            frame.offsetY = canvasHeight - iter.y_offset - iter.height;
+            
+            BOOL sizeEqualsToCanvase = (iter.width == canvasWidth && iter.height == canvasHeight);
+            BOOL offsetIsZero = (iter.x_offset == 0 && iter.y_offset == 0);
+            frame.isFullSize = (sizeEqualsToCanvase && offsetIsZero);
+            
+            if ((!frame.blend || !frame.hasAlpha) && frame.isFullSize)  {
+                frame.blendFromIndex = lastBlendIndex = iterIndex;
+            }else {
+                if (frame.dispose && frame.isFullSize) {
+                    frame.blendFromIndex = lastBlendIndex;
+                    lastBlendIndex = iterIndex + 1;
+                }else {
+                    frame.blendFromIndex = lastBlendIndex;
+                }
+            }
+            if (frame.index != frame.blendFromIndex) needBlend = true;
+            iterIndex ++;
+        } while (WebPDemuxNextFrame(&iter));
+        WebPDemuxReleaseIterator(&iter);
+    }
+    if (frames.count != webpFrameCount) {
+        WebPDemuxDelete(demuxer);
+        return;
+    }
+    
+    _width = canvasWidth;
+    _height = canvasHeight;
+    _frameCount = frames.count;
+    _loopCount = webpLoopCount;
+    _needBlend = needBlend;
+    _webpSource = demuxer;
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    _frames = frames;
+    dispatch_semaphore_signal(_framesLock);
+#else
+    static const char *func = __FUNCTION__;
+    static const int line = __LINE__;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSLog(@"[%s: %d] WebP is not available, check the documentation to see how to install WebP component: https://github.com/ibireme/YYImage#installation", func, line);
+    });
+#endif
+}
+
+- (void)_updateSourceAPNG {
+    ws_png_info_release(_apngSource);
+    _apngSource = nil;
+    
+    [self _update]
+}
+                        
+- (void)_updateSourceImageIO {
+    _width = 0;
+    _height = 0;
+    _orientation = UIImageOrientationUp;
+    _loopCount = 0;
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    _frames = nil;
+    dispatch_semaphore_signal(_framesLock);
+    
+    if (!_source) {
+        if (_finalized) {
+            _source = CGImageSourceCreateWithData((__bridge CFDataRef)_data, NULL);
+        }else {
+            _source = CGImageSourceCreateIncremental(NULL);
+            if (_source) CGImageSourceUpdateData(_source, (__bridge CFDataRef)_data, _finalized);
+        }
+    }else {
+        CGImageSourceUpdateData(_source, (__bridge CFDataRef)_data, _finalized);
+    }
+    if (!_source) return;
+    
+    _frameCount = CGImageSourceGetCount(_source);
+    if (_frameCount == 0) return;
+    
+    if (!_finalized) {
+        _frameCount = 1;
+    }else {
+        if (_type == WSImageTypePNG) {
+            CFDictionaryRef properties = CGImageSourceCopyProperties(_source, NULL);
+            if (properties) {
+                CFDictionaryRef gif = CFDictionaryGetValue(properties, kCGImagePropertyGIFDictionary);
+                if (gif) {
+                    CFTypeRef loop = CFDictionaryGetValue(gif, kCGImagePropertyGIFLoopCount);
+                    if (loop) CFNumberGetValue(loop, kCFNumberNSIntegerType, &_loopCount);
+                }
+                CFRelease(properties);
+            }
+        }
+    }
+    
+    NSMutableArray *frames = [NSMutableArray new];
+    for (unsigned int i = 0; i < _frameCount; i ++) {
+        _WSImageDecoderFrame *frame = [_WSImageDecoderFrame new];
+        frame.index = i;
+        frame.blendFromIndex = i;
+        frame.hasAlpha = true;
+        frame.isFullSize = true;
+        [frames addObject:frame];
+        
+        CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(_source, i, NULL);
+        if (properties) {
+            NSTimeInterval duration = 0;
+            NSInteger orientationValue = 0, width = 0, height = 0;
+            CFTypeRef value = NULL;
+            
+            value = CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth);
+            if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &width);
+            value = CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight);
+            if (value) CFNumberGetValue(value, kCFNumberNSIntegerType, &height);
+            if (_type == WSImageTypeGIF) {
+                CFDictionaryRef gif = CFDictionaryGetValue(properties, kCGImagePropertyGIFDictionary);
+                if (gif) {
+                    value = CFDictionaryGetValue(gif, kCGImagePropertyGIFUnclampedDelayTime);
+                    if (!value) {
+                        value = CFDictionaryGetValue(gif, kCGImagePropertyGIFDelayTime);
+                    }
+                    if (value) CFNumberGetValue(value, kCFNumberDoubleType, &duration);
+                }
+            }
+            
+            frame.width = width;
+            frame.height = height;
+            frame.duration = duration;
+            
+            if (i == 0 && _width + _height ==  0) {
+                _width = width;
+                _height = height;
+                value = CFDictionaryGetValue(properties, kCGImagePropertyOrientation);
+                if (value) {
+                    CFNumberGetValue(value, kCFNumberNSIntegerType, &orientationValue);
+                    _orientation = WSUIImageOrientationFromEXIFValue(orientationValue);
+                }
+            }
+            CFRelease(properties);
+        }
+    }
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    _frames = frames;
+    dispatch_semaphore_signal(_framesLock);
+}
 @end
 
 #pragma mark - image
 @implementation UIImage (WSImageCoder)
+
+- (instancetype)imageByDecoded {
+    if (self.isDecodedForDisplay) return self;
+    CGImageRef imageRef = self.CGImage;
+    if (!imageRef) return self;
+    CGImageRef newImageRef = WSCGImageCreateDecodedCopy(imageRef, true);
+    if (!newImageRef) return self;
+    UIImage *newImage = [[self.class alloc] initWithCGImage:newImageRef scale:self.scale orientation:self.imageOrientation];
+    CGImageRelease(newImageRef);
+    if (!newImage) newImage = self;
+    newImage.isDecodedForDisplay = true;
+    return newImage;
+}
 
 - (BOOL)isDecodedForDisplay {
     if (self.images.count > 1) return true;

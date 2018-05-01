@@ -12,9 +12,11 @@
 
 @property (nonatomic, assign) NSUInteger currentAnimatedImageIndex;
 
+@property (nonatomic, assign) BOOL autoPlayAnimatedImage;
+
 @property (nonatomic, copy) NSString *runloopMode;
 
-@property (nonatomic, assign) BOOL autoPlayAnimatedImage;
+@property (nonatomic) NSUInteger maxBufferSize;
 @end
 
 

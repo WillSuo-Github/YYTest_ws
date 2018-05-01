@@ -10,5 +10,7 @@
 
 @interface NSString (WSAdd)
 
+- (CGFloat)pathScale;
+
 - (NSString *)stringByAppendingNameScale:(CGFloat)scale;
 @end

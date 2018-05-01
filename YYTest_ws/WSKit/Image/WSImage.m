@@ -44,6 +44,36 @@
     return [[self alloc] initWithData:data scale:scale];
 }
 
++ (WSImage *)imageWithContentsOfFile:(NSString *)path {
+    return [[self alloc] initWithContentsOfFile:path];
+}
+
++ (WSImage *)imageWithData:(NSData *)data {
+    return [[self alloc] initWithData:data];
+}
+
++ (WSImage *)imageWithData:(NSData *)data scale:(CGFloat)scale {
+    return [[self alloc] initWithData:data scale:scale];
+}
+
+- (instancetype)initWithContentsOfFile:(NSString *)path {
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    return [self initWithData:data scale:path.pathScale];
+}
+
+- (instancetype)initWithData:(NSData *)data {
+    return [self initWithData:data scale:1];
+}
+
+- (instancetype)initWithData:(NSData *)data scale:(CGFloat)scale {
+    if (data.length == 0) return nil;
+    if (scale <= 0) scale = [UIScreen mainScreen].scale;
+    _preloadedLock = dispatch_semaphore_create(1);
+    @autoreleasepool {
+        WSImageDecoder *decoder = [WSImageDecoder ]
+    }
+}
+
 #pragma mark - protocol WSAnimatedImage
 - (NSUInteger)animateImageFrameCount {
     return _decoder.frameCount;
@@ -63,7 +93,14 @@
     UIImage *image = _preloadedFrames[index];
     dispatch_semaphore_signal(_preloadedLock);
     if (image) return image == (id)[NSNull null] ? nil : image;
-    return [_decoder ]
+    return [_decoder frameAtIndex:index decodeForDisplay:true].image;
+}
+
+- (NSTimeInterval)animatedImageDurationAtIndex:(NSUInteger)index {
+    NSTimeInterval duration = [_decoder frameDurationAtIndex:index];
+    
+    if (duration < 0.011f) return 0.100f;
+    return duration;
 }
 
 @end

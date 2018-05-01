@@ -60,14 +60,20 @@ typedef NS_ENUM(NSUInteger, WSImageBlendOperation) {
 @property (nonatomic, readonly) NSUInteger height;
 @property (nonatomic, readonly, getter=isFinished) BOOL finalized;
 
++ (instancetype)decoderWithData:(NSData *)data scale:(CGFloat)scale;
+
 - (instancetype)initWithScale:(CGFloat)scale NS_DESIGNATED_INITIALIZER;
 
 - (nullable WSImageFrame *)frameAtIndex:(NSUInteger)index decodeForDisplay:(BOOL)decodeForDisplay;
+
+- (NSTimeInterval)frameDurationAtIndex:(NSUInteger)index;
 @end
 
 
 #pragma mark - image
 @interface UIImage (WSImageCoder)
+
+- (instancetype)imageByDecoded;
 
 @property (nonatomic) BOOL isDecodedForDisplay;
 @end

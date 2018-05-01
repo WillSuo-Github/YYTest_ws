@@ -23,6 +23,10 @@
 
 WS_EXTERN_C_BEGIN
 
+#ifndef WS_CLAMP
+#define WS_CLAMP(_x_, _low_, _high_) ((_x_) > (_high_)) ? (_high_) : (((_x_) < (_low_)) ? (_low_) : (_x_))
+#endif
+
 static inline void dispatch_async_on_main_queue(void(^block)(void)) {
     if (pthread_main_np()) {
         block();

@@ -12,6 +12,21 @@
 
 + (double)systemVersion;
 
+#pragma mark - Memory Information
+
+@property (nonatomic, readonly) int64_t memoryTotal;
+
+@property (nonatomic, readonly) int64_t memoryUsed;
+
+@property (nonatomic, readonly) int64_t memoryFree;
+
+@property (nonatomic, readonly) int64_t memoryActive;
+
+@property (nonatomic, readonly) int64_t memoryInactive;
+
+@property (nonatomic, readonly) int64_t memoryWired;
+
+@property (nonatomic, readonly) int64_t memoryPurgable;
 @end
 
 

@@ -9,9 +9,15 @@
 #import "WSAnimationImageView.h"
 #import "WSKit.h"
 
+#define BUFFER_SIZE (10 * 1024 * 1024) //10M
+
 #define LOCK(...) dispatch_semaphore_wait(self->_lock, DISPATCH_TIME_FOREVER);\
 __VA_ARGS__;\
 dispatch_semaphore_signal(self->_lock);
+
+#define LOCK_VIEW(...) dispatch_semaphore_wait(view->_lock, DISPATCH_TIME_FOREVER);\
+__VA_ARGS__; \
+dispatch_semaphore_signal(view->_lock);
 
 typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
     WSAnimationImageTypeNone = 0,
@@ -47,8 +53,50 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
     CGRect _curContentsRect;
     BOOL _curImageHasContentsRect;
 }
-
+- (void)calcMaxBufferCount;
 @end
+
+@interface _WSAnimatedImageViewFetchOperation : NSOperation
+
+@property (nonatomic, weak) WSAnimationImageView *view;
+@property (nonatomic, assign) NSUInteger nextIndex;
+@property (nonatomic, strong) UIImage<WSAnimatedImage> *curImage;
+@end
+
+@implementation _WSAnimatedImageViewFetchOperation
+- (void)main {
+    __strong WSAnimationImageView *view = _view;
+    if (!view) return;
+    if ([self isCancelled]) return;
+    view->_incrBufferCount++;
+    if (view->_incrBufferCount == 0) [view calcMaxBufferCount];
+    if (view->_incrBufferCount > (NSInteger)view->_maxBufferCount) {
+        view->_incrBufferCount = view->_maxBufferCount;
+    }
+    NSUInteger idx = _nextIndex;
+    NSUInteger max = view->_incrBufferCount < 1 ? 1 : view->_incrBufferCount;
+    NSUInteger total = view->_totalFrameCount;
+    view = nil;
+    
+    for (unsigned int i = 0; i < max; i ++, idx ++) {
+        @autoreleasepool {
+            if (idx >= total) idx = 0;
+            if ([self isCancelled]) break;
+            __strong WSAnimationImageView *view = _view;
+            if (!view) break;
+            LOCK_VIEW(BOOL miss = (view->_buffer[@(idx)] == nil));
+            if (miss) {
+                UIImage *img = [_curImage animatedImageFrameAtIndex:idx];
+                img = img.imageByDecoded;
+                if ([self isCancelled]) break;
+                LOCK_VIEW(view->_buffer[@(idx)] = img ? img : [NSNull null]);
+                view = nil;
+            }
+        }
+    }
+}
+@end
+
 
 
 @implementation WSAnimationImageView
@@ -90,7 +138,7 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
 
 - (void)setImage:(UIImage *)image {
     if (self.image == image) return;
-    
+    [self setImage:image withType:WSAnimationImageTypeImage];
 }
 
 - (void)resetAnimated {
@@ -200,7 +248,7 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
         case WSAnimationImageTypeImages: super.animationImages = image; break;
         case WSAnimationImageTypeHighlightedImages: super.highlightedAnimationImages = image; break;
     }
-    
+    [self imageChanged];
 }
 
 - (void)imageChanged {
@@ -236,12 +284,31 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
         _curFrame = newVisibleImage;
         _totalLoop = _curAnimatedImage.animatedImageLoopCount;
         _totalFrameCount = _curAnimatedImage.animateImageFrameCount;
-        self
+        [self calcMaxBufferCount];
     }
+    [self setNeedsDisplay];
+    [self didMoved];
 }
 
 - (void)calcMaxBufferCount {
-    int64_t bytes = (int64_t)_curAnimatedImage.animateImageFrameCount
+    int64_t bytes = (int64_t)_curAnimatedImage.animatedImageBytesPerFrame;
+    if (bytes == 0) bytes = 1024;
+    
+    int64_t total = [UIDevice currentDevice].memoryTotal;
+    int64_t free = [UIDevice currentDevice].memoryFree;
+    int64_t max = MIN(total * 0.2, free * 0.6);
+    max = MAX(max, BUFFER_SIZE);
+    if (_maxBufferSize) max = max > _maxBufferSize ? _maxBufferSize : max;
+    double maxBufferCount = (double)max / (double)bytes;
+    maxBufferCount = WS_CLAMP(maxBufferCount, 1, 512);
+    _maxBufferSize = maxBufferCount;
+}
+
+- (void)dealloc {
+    [_requestQueue cancelAllOperations];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
+    [_link invalidate];
 }
 
 - (void)setRunloopMode:(NSString *)runloopMode {
@@ -277,12 +344,106 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
     [CATransaction commit];
 }
 
+- (void)step:(CADisplayLink *)link {
+    UIImage<WSAnimatedImage> *image = _curAnimatedImage;
+    NSMutableDictionary *buffer = _buffer;
+    UIImage *bufferedImage = nil;
+    NSUInteger nextIndex = (_curIndex + 1) % _totalFrameCount;
+    BOOL bufferIsFull = false;
+    
+    if (!image) return;
+    if (_loopEnd) {
+        [self stopAnimating];
+        return;
+    }
+    
+    NSTimeInterval delay = 0;
+    if (!_bufferMiss) {
+        _time += link.duration;
+        delay = [image animatedImageDurationAtIndex:_curIndex];
+        if (_time < delay) return;
+        _time -= delay;
+        if (nextIndex == 0) {
+            _curLoop++;
+            if (_curLoop >= _totalLoop && _totalLoop != 0) {
+                _loopEnd = true;
+                [self stopAnimating];
+                [self.layer setNeedsDisplay];
+                return;
+            }
+        }
+        delay = [image animatedImageDurationAtIndex:nextIndex];
+        if (_time > delay) _time = delay;
+    }
+    LOCK(
+         bufferedImage = buffer[@(nextIndex)];
+         if (bufferedImage) {
+             if ((int)_incrBufferCount < _totalFrameCount) {
+                 [buffer removeObjectForKey:@(nextIndex)];
+             }
+             [self willChangeValueForKey:@"currentAnimatedImageIndex"];
+             _curIndex = nextIndex;
+             [self didChangeValueForKey:@"currentAnimatedImageIndex"];
+             _curFrame = bufferedImage == (id)[NSNull null] ? nil : bufferedImage;
+             if (_curImageHasContentsRect) {
+                 _curContentsRect = [image animatedImageContentsRectAtIndex:_curIndex];
+                 [self setContentsRect:_curContentsRect forImage:_curFrame];
+             }
+             nextIndex = (_curIndex + 1) % _totalFrameCount;
+             _bufferMiss = false;
+             if (buffer.count == _totalFrameCount) {
+                 bufferIsFull = true;
+             }
+         }else {
+             _bufferMiss = true;
+         }
+    )
+    
+    if (!_bufferMiss) {
+        [self.layer setNeedsDisplay];
+    }
+    
+    if (!bufferIsFull && _requestQueue.operationCount == 0) {
+        _WSAnimatedImageViewFetchOperation *operation = [_WSAnimatedImageViewFetchOperation new];
+        operation.view = self;
+        operation.nextIndex = nextIndex;
+        operation.curImage = image;
+        [_requestQueue addOperation:operation];
+    }
+}
+
+- (void)displayLayer:(CALayer *)layer {
+    if (_curFrame) {
+        layer.contents = (__bridge id)_curFrame.CGImage;
+    }
+}
+
 - (void)didReceiveMemoryWarning:(NSNotification *)notification {
     
 }
 
 - (void)didEnterBackground:(NSNotification *)notification {
     
+}
+
+- (void)didMoved {
+    if (self.autoPlayAnimatedImage) {
+        if (self.superview && self.window) {
+            [self startAnimating];
+        }else {
+            [self stopAnimating];
+        }
+    }
+}
+
+- (void)didMoveToWindow {
+    [super didMoveToWindow];
+    [self didMoved];
+}
+
+- (void)didMoveToSuperview {
+    [super didMoveToSuperview];
+    [self didMoved];
 }
 
 @end
