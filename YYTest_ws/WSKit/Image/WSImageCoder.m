@@ -125,6 +125,16 @@ typedef struct {
     bool apng_first_frame_is_cover;
 } ws_png_info;
 
+static void ws_png_chunk_IHDR_read(ws_png_chunk_IHDR *IHDR, const uint8_t *data) {
+    IHDR->width = ws_swap_endian_uint32(*((uint32_t *)(data)));
+    IHDR->height = ws_swap_endian_uint32(*((uint32_t *)(data + 4)));
+    IHDR->bit_depth = data[8];
+    IHDR->color_type = data[9];
+    IHDR->compression_method = data[10];
+    IHDR->filter_method = data[11];
+    IHDR->interlace_method = data[12];
+}
+
 static void ws_png_chunk_IHDR_write(ws_png_chunk_IHDR *IHDR, uint8_t *data) {
     *((uint32_t *)(data)) = ws_swap_endian_uint32(IHDR->width);
     *((uint32_t *)(data + 4)) = ws_swap_endian_uint32(IHDR->height);
@@ -329,12 +339,220 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     return frame_data;
 }
 
+static bool ws_png_validate_animation_chunk_order(ws_png_chunk_info *chunks,
+                                                  uint32_t chunk_num,
+                                                  uint32_t *first_idat_index,
+                                                  bool *first_frame_is_cover) {
+    if (chunk_num <= 2) return false;
+    if (chunks->fourcc != WS_FOUR_CC('I', 'H', 'D', 'R')) return false;
+    if ((chunks + chunk_num - 1)->fourcc != WS_FOUR_CC('I', 'E', 'N', 'D')) return false;
+    
+    uint32_t prev_fourcc = 0;
+    uint32_t IHDR_num = 0;
+    uint32_t IDAT_num = 0;
+    uint32_t acTL_num = 0;
+    uint32_t fcTL_num = 0;
+    uint32_t first_IDAT = 0;
+    bool first_frame_cover = false;
+    for (uint32_t i = 0; i < chunk_num; i ++) {
+        ws_png_chunk_info *chunk = chunks + i;
+        switch (chunk->fourcc) {
+            case WS_FOUR_CC('I', 'H', 'D', 'R'): {
+                if (i != 0) return false;
+                if (IHDR_num > 0) return false;
+                IHDR_num++;
+            }   break;
+            case WS_FOUR_CC('I', 'D', 'A', 'T'): {
+                if (prev_fourcc != WS_FOUR_CC('I', 'D', 'A', 'T')) {
+                    if (IDAT_num == 0) {
+                        first_IDAT = i;
+                    }else {
+                        return false;
+                    }
+                }
+                IDAT_num++;
+            }   break;
+            case WS_FOUR_CC('a', 'c', 'T', 'L'): {
+                if (acTL_num > 0) return false;
+                acTL_num++;
+            }   break;
+            case WS_FOUR_CC('f', 'c', 'T', 'L'): {
+                if (i + 1 == chunk_num) return false;
+                if ((chunk + 1)->fourcc != WS_FOUR_CC('f', 'd', 'A', 'T') &&
+                    (chunk + 1)->fourcc != WS_FOUR_CC('I', 'D', 'A', 'Y')) {
+                    return false;
+                }
+                if (fcTL_num == 0) {
+                    if ((chunk + 1)->fourcc == WS_FOUR_CC('I', 'D', 'A', 'T')) {
+                        first_frame_cover = true;
+                    }
+                }
+                fcTL_num++;
+            }   break;
+            case WS_FOUR_CC('f', 'd', 'A', 'T'): {
+                if (prev_fourcc != WS_FOUR_CC('f', 'd', 'A', 'T') && prev_fourcc != WS_FOUR_CC('f', 'c', 'T', 'L')) {
+                    return false;
+                }
+            }   break;
+        }
+        prev_fourcc = chunk->fourcc;
+    }
+    if (IHDR_num != 1) return false;
+    if (IDAT_num == 0) return false;
+    if (acTL_num != 1) return false;
+    if (fcTL_num < acTL_num) return false;
+    *first_idat_index = first_IDAT;
+    *first_frame_is_cover = first_frame_cover;
+    return true;
+}
+
 static void ws_png_info_release(ws_png_info *info) {
     if (info) {
         if (info->chunks) free(info->chunks);
         if (info->apng_frames) free(info->apng_frames);
         if (info->apng_shared_chunk_indexs) free(info->apng_shared_chunk_indexs);
         free(info);
+    }
+}
+
+static ws_png_info *ws_png_info_create(const uint8_t *data, uint32_t length) {
+    if (length < 32) return NULL;
+    if (*((uint32_t*)data) != WS_FOUR_CC(0x89, 0x50, 0x4E, 0x47)) return NULL;
+    if (*((uint32_t*)data + 4) != WS_FOUR_CC(0x0D, 0x0A, 0x1A, 0x0A)) return NULL;
+    
+    uint32_t chunk_realloc_num = 16;
+    ws_png_chunk_info *chunks = malloc(sizeof(ws_png_chunk_info) * chunk_realloc_num);
+    if (!chunks) return NULL;
+    
+    uint32_t offset = 8;
+    uint32_t chunk_num = 0;
+    uint32_t chunk_capacity = chunk_realloc_num;
+    uint32_t apng_loop_num = 0;
+    int32_t apng_sequence_index = 0;
+    int32_t apng_frame_index = 0;
+    int32_t apng_frame_number = -1;
+    bool apng_chunk_error = false;
+    do {
+        if (chunk_num >= chunk_capacity) {
+            ws_png_chunk_info *new_chunks = realloc(chunks, sizeof(ws_png_chunk_info) * (chunk_capacity + chunk_realloc_num));
+            if (!new_chunks) {
+                free(new_chunks);
+                return NULL;
+            }
+            chunks = new_chunks;
+            chunk_capacity += chunk_realloc_num;
+        }
+        ws_png_chunk_info *chunk = chunks + chunk_num;
+        const uint8_t *chunk_data = data + offset;
+        chunk->offset = offset;
+        chunk->length = ws_swap_endian_uint32(*((uint32_t *)chunk_data));
+        if ((uint64_t)chunk->offset + (uint64_t)chunk->length + 12 > length) {
+            free(chunks);
+            return NULL;
+        }
+        
+        chunk->fourcc = *((uint32_t *)(chunk_data + 4));
+        if ((uint64_t)chunk->offset + 4 + chunk->length + 4 > (uint64_t)length) break;
+        chunk->crc32 = ws_swap_endian_uint32(*((uint32_t *)(chunk_data + 8 + chunk->length)));
+        chunk_num++;
+        offset += 12 + chunk->length;
+        
+        switch (chunk->fourcc) {
+            case WS_FOUR_CC('a', 'c', 'T', 'L'): {
+                if (chunk->length == 8) {
+                    apng_frame_number = ws_swap_endian_uint32(*((uint32_t *)(chunk_data + 8)));
+                    apng_loop_num = ws_swap_endian_uint32(*((uint32_t *)(chunk_data + 12)));
+                }else {
+                    apng_chunk_error = true;
+                }
+            }   break;
+            case WS_FOUR_CC('f', 'c', 'T', 'L'):
+            case WS_FOUR_CC('f', 'd', 'A', 'T'): {
+                if (chunk->fourcc == WS_FOUR_CC('f', 'c', 'T', 'L')) {
+                    if (chunk->length != 26) {
+                        apng_chunk_error = true;
+                    }else {
+                        apng_frame_index++;
+                    }
+                }
+                if (chunk->length > 4) {
+                    uint32_t sequence = ws_swap_endian_uint32(*((uint32_t *)(chunk_data + 8)));
+                    if (apng_sequence_index + 1 == sequence) {
+                        apng_sequence_index++;
+                    }else {
+                        apng_chunk_error = true;
+                    }
+                }else {
+                    apng_chunk_error = true;
+                }
+            }   break;
+            case WS_FOUR_CC('I', 'E', 'N', 'D'): {
+                offset = length;
+            }   break;
+        }
+    } while (offset + 12 <= length);
+    
+    if (chunk_num < 3 ||
+        chunks->fourcc != WS_FOUR_CC('I', 'H', 'D', 'R') ||
+        chunks->length != 13) {
+        free(chunks);
+        return NULL;
+    }
+    
+    ws_png_info *info = calloc(1, sizeof(ws_png_info));
+    if (!info) {
+        free(chunks);
+        return NULL;
+    }
+    info->chunks = chunks;
+    info->chunk_num = chunk_num;
+    ws_png_chunk_IHDR_read(&info->header, data + chunks->offset + 8);
+    
+    if (!apng_chunk_error && apng_frame_number == apng_frame_index && apng_frame_number >= 1) {
+        bool first_frame_is_cover = false;
+        uint32_t first_IDAT_index = 0;
+        if (!ws_png_validate_animation_chunk_order(info->chunks, info->chunk_num, &first_IDAT_index, &first_frame_is_cover)) {
+            return info;
+        }
+        
+        info->apng_loop_num = apng_loop_num;
+        info->apng_frame_num = apng_frame_number;
+        info->apng_first_frame_is_cover = first_frame_is_cover;
+        info->apng_shared_insert_index = first_IDAT_index;
+        info->apng_frames = calloc(apng_frame_number, sizeof(ws_png_frame_info));
+        if (!info->apng_frames) {
+            ws_png_info_release(info);
+            return NULL;
+        }
+        
+        int32_t frame_index = -1;
+        uint32_t *shared_chunk_index = info->apng_shared_chunk_indexs;
+        for (int32_t i = 0; i < chunk_num; i ++) {
+            ws_png_chunk_info *chunk = info->chunks + i;
+            switch (chunk->fourcc) {
+                case WS_FOUR_CC('I', 'D', 'A', 'T'): {
+                    if (info->apng_shared_insert_index == 0) {
+                        info->apng_shared_insert_index = i;
+                    }
+                    if (first_frame_is_cover) {
+                        ws_png_frame_info *frame = info->apng_frames + frame_index;
+                        frame->chunk_num++;
+                        frame->chunk_size += chunk->length + 12;
+                    }
+                }   break;
+                case WS_FOUR_CC('a', 'c', 'T', 'L'): {
+                }   break;
+                case WS_FOUR_CC('f', 'c', 'T', 'L'): {
+                    frame_index++;
+                    ws_png_frame_info *frame = info->apng_frames + frame_index;
+                    frame->chunk_index = i + 1;
+                    
+                }   break;
+                    
+                default:
+                    break;
+            }
+        }
     }
 }
 
@@ -900,7 +1118,11 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
     ws_png_info_release(_apngSource);
     _apngSource = nil;
     
-    [self _update]
+    [self _updateSourceImageIO];
+    if (_frameCount == 0) return;
+    if (!_finalized) return;
+    
+    ws_png_info *apng =
 }
                         
 - (void)_updateSourceImageIO {
