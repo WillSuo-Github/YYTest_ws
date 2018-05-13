@@ -70,8 +70,21 @@
     if (scale <= 0) scale = [UIScreen mainScreen].scale;
     _preloadedLock = dispatch_semaphore_create(1);
     @autoreleasepool {
-        WSImageDecoder *decoder = [WSImageDecoder ]
+        WSImageDecoder *decoder = [WSImageDecoder decoderWithData:data scale:scale];
+        WSImageFrame *frame = [decoder frameAtIndex:0 decodeForDisplay:true];
+        UIImage *image = frame.image;
+        if (!image) return nil;
+        self = [self initWithCGImage:image.CGImage scale:decoder.scale orientation:image.imageOrientation];
+        if (!self) return nil;
+        _animatedImageType = decoder.type;
+        if (decoder.frameCount > 1) {
+            _decoder = decoder;
+            _bytesPerFrame = CGImageGetBytesPerRow(image.CGImage) * CGImageGetHeight(image.CGImage);
+            _animatedImageMemorySize = _bytesPerFrame * decoder.frameCount;
+        }
+        self.isDecodedForDisplay = true;
     }
+    return self;
 }
 
 #pragma mark - protocol WSAnimatedImage

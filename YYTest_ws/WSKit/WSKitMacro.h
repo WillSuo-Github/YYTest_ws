@@ -38,7 +38,7 @@ static inline void dispatch_async_on_main_queue(void(^block)(void)) {
 static inline void pthread_mutex_init_recursive(pthread_mutex_t *mutex, bool recursive) {
 #define WSMUTEX_ASSERT_ON_ERROR(x_) do { \
 __unused volatile int res = (x_); \
-assert(res = 0); \
+assert(res == 0); \
 } while (0)
     assert(mutex != NULL);
     if (!recursive) {

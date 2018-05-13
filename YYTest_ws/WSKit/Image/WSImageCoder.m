@@ -339,6 +339,38 @@ static uint8_t *ws_png_copy_frame_data_at_index(const uint8_t *data,
     return frame_data;
 }
 
+static void ws_png_chunk_fcTL_read(ws_png_chunk_fcTL *fcTL, const uint8_t *data) {
+    fcTL->sequence_number = ws_swap_endian_uint32(*((uint32_t *)(data)));
+    fcTL->width = ws_swap_endian_uint32(*((uint32_t *)(data + 4)));
+    fcTL->height = ws_swap_endian_uint32(*((uint32_t *)(data + 8)));
+    fcTL->x_offset = ws_swap_endian_uint32(*((uint32_t *)(data + 12)));
+    fcTL->y_offset = ws_swap_endian_uint32(*((uint32_t *)(data + 16)));
+    fcTL->delay_num = ws_swap_endian_uint16(*((uint32_t *)(data + 20)));
+    fcTL->delay_den = ws_swap_endian_uint16(*((uint32_t *)(data + 22)));
+    fcTL->dispose_op = data[24];
+    fcTL->blend_op = data[25];
+}
+
+static void ws_png_chunk_fcTL_write(ws_png_chunk_fcTL *fcTL, uint8_t *data) {
+    *((uint32_t *)(data)) = ws_swap_endian_uint32(fcTL->sequence_number);
+    *((uint32_t *)(data + 4)) = ws_swap_endian_uint32(fcTL->width);
+    *((uint32_t *)(data + 8)) = ws_swap_endian_uint32(fcTL->height);
+    *((uint32_t *)(data + 12)) = ws_swap_endian_uint32(fcTL->x_offset);
+    *((uint32_t *)(data + 16)) = ws_swap_endian_uint32(fcTL->y_offset);
+    *((uint16_t *)(data + 20)) = ws_swap_endian_uint16(fcTL->delay_num);
+    *((uint16_t *)(data + 22)) = ws_swap_endian_uint16(fcTL->delay_den);
+    data[24] = fcTL->dispose_op;
+    data[25] = fcTL->blend_op;
+}
+
+static double ws_png_delay_to_seconds(uint16_t num, uint16_t den) {
+    if (den == 0) {
+        return num / 100.0;
+    }else {
+        return (double)num / (double)den;
+    }
+}
+
 static bool ws_png_validate_animation_chunk_order(ws_png_chunk_info *chunks,
                                                   uint32_t chunk_num,
                                                   uint32_t *first_idat_index,
@@ -546,14 +578,23 @@ static ws_png_info *ws_png_info_create(const uint8_t *data, uint32_t length) {
                     frame_index++;
                     ws_png_frame_info *frame = info->apng_frames + frame_index;
                     frame->chunk_index = i + 1;
-                    
+                    ws_png_chunk_fcTL_read(&frame->frame_control, data + chunk->offset + 8);
                 }   break;
-                    
-                default:
-                    break;
+                case WS_FOUR_CC('f', 'd', 'A', 'T'): {
+                    ws_png_frame_info *frame = info->apng_frames + frame_index;
+                    frame->chunk_num++;
+                    frame->chunk_size += chunk->length + 12;
+                }   break;
+                default: {
+                    *shared_chunk_index = i;
+                    shared_chunk_index++;
+                    info->apng_shared_chunk_size += chunk->length + 12;
+                    info->apng_shared_chunk_num++;
+                }   break;
             }
         }
     }
+    return info;
 }
 
 UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
@@ -631,7 +672,9 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
 + (instancetype)decoderWithData:(NSData *)data scale:(CGFloat)scale {
     if (!data) return nil;
     WSImageDecoder *decoder = [[WSImageDecoder alloc] initWithScale:scale];
-    decoder
+    [decoder updateData:data final:true];
+    if (decoder.frameCount == 0) return nil;
+    return decoder;
 }
 
 - (instancetype)init {
@@ -650,7 +693,9 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
 - (BOOL)updateData:(NSData *)data final:(BOOL)final {
     BOOL result = false;
     pthread_mutex_lock(&_lock);
-    result = [self _]
+    result = [self _updateData:data final:final];
+    pthread_mutex_unlock(&_lock);
+    return result;
 }
 
 - (WSImageFrame *)frameAtIndex:(NSUInteger)index decodeForDisplay:(BOOL)decodeForDisplay {
@@ -683,10 +728,17 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
     if (_sourceTypeDetected) {
         if (_type != type) {
             return false;
-        }esle {
-            self
+        }else {
+            [self _updateSource];
+        }
+    }else {
+        if (_data.length > 16) {
+            _type = type;
+            _sourceTypeDetected = true;
+            [self _updateSource];
         }
     }
+    return true;
 }
 
 - (WSImageFrame *)_frameAtIndex:(NSUInteger)index decodeForDisplay:(BOOL)decodeFroDisplay {
@@ -1010,11 +1062,14 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
 - (void)_updateSource {
     switch (_type) {
         case WSImageTypeWebP: {
-            
+            [self _updateSourceWebP];
         }   break;
-            
-        default:
-            break;
+        case WSImageTypePNG: {
+            [self _updateSourceAPNG];
+        }   break;
+        default: {
+            [self _updateSourceImageIO];
+        }   break;
     }
 }
 
@@ -1122,7 +1177,83 @@ UIImageOrientation WSUIImageOrientationFromEXIFValue(NSInteger value) {
     if (_frameCount == 0) return;
     if (!_finalized) return;
     
-    ws_png_info *apng =
+    ws_png_info *apng = ws_png_info_create(_data.bytes, (uint32_t)_data.length);
+    if (!apng) return;
+    if (apng->apng_frame_num == 0 ||
+        (apng->apng_frame_num == 1 && apng->apng_first_frame_is_cover)) {
+        ws_png_info_release(apng);
+        return;
+    }
+    if (_source) {
+        CFRelease(_source);
+        _source = NULL;
+    }
+    
+    uint32_t canvasWidth = apng->header.width;
+    uint32_t canvasHeight = apng->header.height;
+    NSMutableArray *frames = [NSMutableArray array];
+    BOOL needBlend = false;
+    uint32_t lastBlendIndex = 0;
+    for (uint32_t i = 0; i < apng->apng_frame_num; i ++) {
+        _WSImageDecoderFrame *frame = [_WSImageDecoderFrame new];
+        [frames addObject:frame];
+        
+        ws_png_frame_info *fi = apng->apng_frames + i;
+        frame.index = i;
+        frame.duration = ws_png_delay_to_seconds(fi->frame_control.delay_num, fi->frame_control.delay_den);
+        frame.hasAlpha = true;
+        frame.width = fi->frame_control.width;
+        frame.height = fi->frame_control.height;
+        frame.offsetX = fi->frame_control.x_offset;
+        frame.offsetY = fi->frame_control.y_offset - fi->frame_control.height;
+        
+        BOOL sizeEqualsToCanvas = (frame.width == canvasWidth && frame.height == canvasHeight);
+        BOOL offsetIsZero = (fi->frame_control.x_offset == 0 & fi->frame_control.y_offset == 0);
+        frame.isFullSize = (sizeEqualsToCanvas && offsetIsZero);
+        
+        switch (fi->frame_control.dispose_op) {
+            case WS_PNG_DISPOSE_OP_BACKGROUND: {
+                frame.dispose = WSImageDisposeBackground;
+            }   break;
+            case WS_PNG_DISPOSE_OP_PREVIOUS: {
+                frame.dispose = WSImageDisposePrevious;
+            }   break;
+            default: {
+                frame.dispose = WSImageDisposeNone;
+            }   break;
+        }
+        switch (fi->frame_control.blend_op) {
+            case WS_PNG_BLEND_OP_OVER: {
+                frame.blend = WSImageBlendOver;
+            }   break;
+            default: {
+                frame.blend = WSImageBlendNone;
+            }   break;
+        }
+        
+        if (frame.blend == WSImageBlendNone && frame.isFullSize) {
+            frame.blendFromIndex = i;
+            if (frame.dispose != WSImageDisposePrevious) lastBlendIndex = i;
+        }else {
+            if (frame.dispose == WSImageDisposeBackground && frame.isFullSize) {
+                frame.blendFromIndex = lastBlendIndex;
+                lastBlendIndex = i + 1;
+            }else {
+                frame.blendFromIndex = lastBlendIndex;
+            }
+        }
+        if (frame.index != frame.blendFromIndex) needBlend = true;
+    }
+    
+    _width = canvasWidth;
+    _height = canvasHeight;
+    _frameCount = frames.count;
+    _loopCount = apng->apng_loop_num;
+    _needBlend = needBlend;
+    _apngSource = apng;
+    dispatch_semaphore_wait(_framesLock, DISPATCH_TIME_FOREVER);
+    _frames = frames;
+    dispatch_semaphore_signal(_framesLock);
 }
                         
 - (void)_updateSourceImageIO {

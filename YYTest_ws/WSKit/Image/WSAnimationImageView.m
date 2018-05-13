@@ -19,12 +19,12 @@ dispatch_semaphore_signal(self->_lock);
 __VA_ARGS__; \
 dispatch_semaphore_signal(view->_lock);
 
-typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
-    WSAnimationImageTypeNone = 0,
-    WSAnimationImageTypeImage,
-    WSAnimationImageTypeHighlightedImage,
-    WSAnimationImageTypeImages,
-    WSAnimationImageTypeHighlightedImages,
+typedef NS_ENUM(NSUInteger, WSAnimatedImageType) {
+    WSAnimatedImageTypeNone = 0,
+    WSAnimatedImageTypeImage,
+    WSAnimatedImageTypeHighlightedImage,
+    WSAnimatedImageTypeImages,
+    WSAnimatedImageTypeHighlightedImages,
 };
 
 @interface WSAnimationImageView () {
@@ -97,6 +97,11 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
 }
 @end
 
+@interface WSAnimationImageView () {
+    
+}
+@property (nonatomic, readwrite) BOOL currentIsPlayingAnimation;
+@end
 
 
 @implementation WSAnimationImageView
@@ -138,7 +143,7 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
 
 - (void)setImage:(UIImage *)image {
     if (self.image == image) return;
-    [self setImage:image withType:WSAnimationImageTypeImage];
+    [self setImage:image withType:WSAnimatedImageTypeImage];
 }
 
 - (void)resetAnimated {
@@ -213,46 +218,46 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
     return _curIndex;
 }
 
-- (id)imageForType:(WSAnimationImageType)type {
+- (id)imageForType:(WSAnimatedImageType)type {
     switch (type) {
-        case WSAnimationImageTypeNone: return nil;
-        case WSAnimationImageTypeImage: return self.image;
-        case WSAnimationImageTypeImages: return self.animationImages;
-        case WSAnimationImageTypeHighlightedImage: return self.highlightedImage;
-        case WSAnimationImageTypeHighlightedImages: return self.highlightedAnimationImages;
+        case WSAnimatedImageTypeNone: return nil;
+        case WSAnimatedImageTypeImage: return self.image;
+        case WSAnimatedImageTypeImages: return self.animationImages;
+        case WSAnimatedImageTypeHighlightedImage: return self.highlightedImage;
+        case WSAnimatedImageTypeHighlightedImages: return self.highlightedAnimationImages;
     }
     return nil;
 }
 
-- (WSAnimationImageType)currentImageType {
-    WSAnimationImageType curType = WSAnimationImageTypeNone;
+- (WSAnimatedImageType)currentImageType {
+    WSAnimatedImageType curType = WSAnimatedImageTypeNone;
     if (self.highlighted) {
-        if (self.highlightedAnimationImages.count) curType = WSAnimationImageTypeHighlightedImages;
-        else if (self.highlightedImage) curType = WSAnimationImageTypeHighlightedImage;
+        if (self.highlightedAnimationImages.count) curType = WSAnimatedImageTypeHighlightedImages;
+        else if (self.highlightedImage) curType = WSAnimatedImageTypeHighlightedImage;
     }
-    if (curType == WSAnimationImageTypeNone) {
-        if (self.animationImages.count) curType = WSAnimationImageTypeImages;
-        else if (self.image) curType = WSAnimationImageTypeImage;
+    if (curType == WSAnimatedImageTypeNone) {
+        if (self.animationImages.count) curType = WSAnimatedImageTypeImages;
+        else if (self.image) curType = WSAnimatedImageTypeImage;
     }
     return curType;
 }
 
-- (void)setImage:(id)image withType:(WSAnimationImageType)type {
+- (void)setImage:(id)image withType:(WSAnimatedImageType)type {
     [self stopAnimating];
     if (_link) [self resetAnimated];
     _curFrame = nil;
     switch (type) {
-        case WSAnimationImageTypeNone: break;
-        case WSAnimationImageTypeImage: super.image = image; break;
-        case WSAnimationImageTypeHighlightedImage: super.highlightedImage = image; break;
-        case WSAnimationImageTypeImages: super.animationImages = image; break;
-        case WSAnimationImageTypeHighlightedImages: super.highlightedAnimationImages = image; break;
+        case WSAnimatedImageTypeNone: break;
+        case WSAnimatedImageTypeImage: super.image = image; break;
+        case WSAnimatedImageTypeHighlightedImage: super.highlightedImage = image; break;
+        case WSAnimatedImageTypeImages: super.animationImages = image; break;
+        case WSAnimatedImageTypeHighlightedImages: super.highlightedAnimationImages = image; break;
     }
     [self imageChanged];
 }
 
 - (void)imageChanged {
-    WSAnimationImageType newType = [self currentImageType];
+    WSAnimatedImageType newType = [self currentImageType];
     id newVisibleImage = [self imageForType:newType];
     NSUInteger newImageFrameCount = 0;
     BOOL hasContentsRect = false;
@@ -416,6 +421,31 @@ typedef NS_ENUM(NSUInteger, WSAnimationImageType) {
     if (_curFrame) {
         layer.contents = (__bridge id)_curFrame.CGImage;
     }
+}
+
+- (void)startAnimating {
+    WSAnimatedImageType type = [self currentImageType];
+    if (type == WSAnimatedImageTypeImages || type == WSAnimatedImageTypeHighlightedImage) {
+        NSArray *images = [self imageForType:type];
+        if (images.count > 0) {
+            [super startAnimating];
+            self.currentIsPlayingAnimation = true;
+        }
+    }else {
+        if (_curAnimatedImage && _link.paused) {
+            _curLoop = 0;
+            _loopEnd = false;
+            _link.paused = false;
+            self.currentIsPlayingAnimation = true;
+        }
+    }
+}
+
+- (void)stopAnimating {
+    [super stopAnimating];
+    [_requestQueue cancelAllOperations];
+    _link.paused = true;
+    self.currentIsPlayingAnimation = false;
 }
 
 - (void)didReceiveMemoryWarning:(NSNotification *)notification {

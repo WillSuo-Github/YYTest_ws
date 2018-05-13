@@ -12,6 +12,10 @@
 
 @interface WSImage : UIImage <WSAnimatedImage>
 
+@property (nonatomic, readonly) WSImageType animatedImageType;
+
+@property (nonatomic, readonly) NSUInteger animatedImageMemorySize;
+
 + (nullable WSImage *)imageNamed:(NSString *)name;
 
 @end

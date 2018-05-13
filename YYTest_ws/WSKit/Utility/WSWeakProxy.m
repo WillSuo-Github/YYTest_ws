@@ -60,6 +60,10 @@
     return [_target isMemberOfClass:aClass];
 }
 
+- (BOOL)conformsToProtocol:(Protocol *)aProtocol {
+    return [_target conformsToProtocol:aProtocol];
+}
+
 - (BOOL)isProxy {
     return true;
 }
