@@ -423,6 +423,10 @@ typedef NS_ENUM(NSUInteger, WSAnimatedImageType) {
     }
 }
 
+- (BOOL)isAnimating {
+    return self.currentIsPlayingAnimation;
+}
+
 - (void)startAnimating {
     WSAnimatedImageType type = [self currentImageType];
     if (type == WSAnimatedImageTypeImages || type == WSAnimatedImageTypeHighlightedImage) {

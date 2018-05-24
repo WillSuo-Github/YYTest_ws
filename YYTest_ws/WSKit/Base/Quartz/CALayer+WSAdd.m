@@ -16,6 +16,6 @@
 }
 
 - (void)setTransformScale:(CGFloat)transformScale {
-    [self setValue:@(transformScale) forKey:@"transform.scale"];
+    [self setValue:@(transformScale) forKeyPath:@"transform.scale"];
 }
 @end

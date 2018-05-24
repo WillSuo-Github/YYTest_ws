@@ -20,6 +20,7 @@
 
 #import "WSImage.h"
 #import "WSAnimationImageView.h"
+#import "WSFrameImage.h"
 
 #import "WSKitMacro.h"
 #import "WSWeakProxy.h"

@@ -21,7 +21,7 @@
         
         ///??? 后边两种都不知道是啥
         UIViewAnimationOptions op =UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowAnimatedContent | UIViewAnimationOptionBeginFromCurrentState;
-        
+
         [UIView animateWithDuration:0.1 delay:0 options:op animations:^{
             _view.layer.transformScale = 0.97;
         } completion:^(BOOL finished) {

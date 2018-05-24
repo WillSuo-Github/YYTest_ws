@@ -10,6 +10,7 @@
 #import "WSKit.h"
 #import "WSImageExampleHelper.h"
 
+
 @interface WSImageDisplayExample ()<UIGestureRecognizerDelegate>
 
 @end
@@ -39,12 +40,31 @@
     [_scrollView addSubview:label];
 
     [self addImageWithName:@"niconiconi" text:@"Animated gif"];
+    [self addImageWithName:@"wall-e" text:@"Animated WebP"];
+    [self addImageWithName:@"pia" text:@"Animated PNG (APNG)"];
+    [self addFrameImageWithText:@"Frame Animation"];
     
     _scrollView.panGestureRecognizer.cancelsTouchesInView = true;
 }
 
 - (void)addImageWithName:(NSString *)name text:(NSString *)text {
     WSImage *image = [WSImage imageNamed:name];
+    [self addImage:image size:CGSizeZero text:text];
+}
+
+- (void)addFrameImageWithText:(NSString *)text {
+    NSString *basePath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"EmoticonWeibo.bundle/com.sina.default"];
+    NSMutableArray *paths = [NSMutableArray array];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_aini@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_baibai@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_chanzui@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_chijing@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_dahaqi@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_guzhang@3x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_haha@2x.png"]];
+    [paths addObject:[basePath stringByAppendingPathComponent:@"d_haixiu@3x.png"]];
+    
+    WSFrameImage *image = [[WSFrameImage alloc] initWithImagePaths:paths oneFrameDuration:1 loopCount:0];
     [self addImage:image size:CGSizeZero text:text];
 }
 

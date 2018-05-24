@@ -27,6 +27,10 @@
 		8AAD97F3206F567C00A1DD46 /* WSImageExampleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F2206F567C00A1DD46 /* WSImageExampleHelper.m */; };
 		8AAD97F6206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F5206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m */; };
 		8AAD97FA206F5BCF00A1DD46 /* CALayer+WSAdd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD97F9206F5BCF00A1DD46 /* CALayer+WSAdd.m */; };
+		8AB1A0D620A8703A0056E951 /* wall-e@2x.webp in Resources */ = {isa = PBXBuildFile; fileRef = 8AB1A0D520A8703A0056E951 /* wall-e@2x.webp */; };
+		8AB1A0D820A8704C0056E951 /* pia@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8AB1A0D720A8704C0056E951 /* pia@2x.png */; };
+		8AB1A0DA20A877320056E951 /* EmoticonWeibo.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 8AB1A0D920A877320056E951 /* EmoticonWeibo.bundle */; };
+		8AB1A0DD20A8777B0056E951 /* WSFrameImage.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB1A0DC20A8777B0056E951 /* WSFrameImage.m */; };
 		8AC3FDEC2074AFBF0078E04F /* niconiconi@2x.gif in Resources */ = {isa = PBXBuildFile; fileRef = 8AC3FDEB2074AFBF0078E04F /* niconiconi@2x.gif */; };
 		8ACE9FAE206A9AB2007B9108 /* WSImageExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */; };
 		8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */ = {isa = PBXBuildFile; fileRef = 8ACE9FB0206A9BA5007B9108 /* WSImageDisplayExample.m */; };
@@ -94,6 +98,11 @@
 		8AAD97F8206F5BCF00A1DD46 /* CALayer+WSAdd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CALayer+WSAdd.h"; sourceTree = "<group>"; };
 		8AAD97F9206F5BCF00A1DD46 /* CALayer+WSAdd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "CALayer+WSAdd.m"; sourceTree = "<group>"; };
 		8AAD97FB206F5FB200A1DD46 /* WSKitMacro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSKitMacro.h; sourceTree = "<group>"; };
+		8AB1A0D520A8703A0056E951 /* wall-e@2x.webp */ = {isa = PBXFileReference; lastKnownFileType = file; path = "wall-e@2x.webp"; sourceTree = "<group>"; };
+		8AB1A0D720A8704C0056E951 /* pia@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "pia@2x.png"; sourceTree = "<group>"; };
+		8AB1A0D920A877320056E951 /* EmoticonWeibo.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = EmoticonWeibo.bundle; sourceTree = "<group>"; };
+		8AB1A0DB20A8777B0056E951 /* WSFrameImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSFrameImage.h; sourceTree = "<group>"; };
+		8AB1A0DC20A8777B0056E951 /* WSFrameImage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSFrameImage.m; sourceTree = "<group>"; };
 		8AC3FDEB2074AFBF0078E04F /* niconiconi@2x.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = "niconiconi@2x.gif"; sourceTree = "<group>"; };
 		8ACE9FAC206A9AB2007B9108 /* WSImageExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WSImageExample.h; sourceTree = "<group>"; };
 		8ACE9FAD206A9AB2007B9108 /* WSImageExample.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WSImageExample.m; sourceTree = "<group>"; };
@@ -201,6 +210,9 @@
 		8A0252DB20236A7400994329 /* Other */ = {
 			isa = PBXGroup;
 			children = (
+				8AB1A0D920A877320056E951 /* EmoticonWeibo.bundle */,
+				8AB1A0D520A8703A0056E951 /* wall-e@2x.webp */,
+				8AB1A0D720A8704C0056E951 /* pia@2x.png */,
 				8AC3FDEB2074AFBF0078E04F /* niconiconi@2x.gif */,
 				8A0252AB2023679700994329 /* Main.storyboard */,
 				8A0252AE2023679700994329 /* Assets.xcassets */,
@@ -312,6 +324,8 @@
 				8AAD97EF206F54CE00A1DD46 /* WSAnimationImageView.m */,
 				8A21E6BC20751DEE00D00D93 /* WSImageCoder.h */,
 				8A21E6BD20751DEE00D00D93 /* WSImageCoder.m */,
+				8AB1A0DB20A8777B0056E951 /* WSFrameImage.h */,
+				8AB1A0DC20A8777B0056E951 /* WSFrameImage.m */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -424,8 +438,11 @@
 			files = (
 				8AC3FDEC2074AFBF0078E04F /* niconiconi@2x.gif in Resources */,
 				8A0252B22023679700994329 /* LaunchScreen.storyboard in Resources */,
+				8AB1A0D620A8703A0056E951 /* wall-e@2x.webp in Resources */,
+				8AB1A0D820A8704C0056E951 /* pia@2x.png in Resources */,
 				8A0252AF2023679700994329 /* Assets.xcassets in Resources */,
 				8A0252AD2023679700994329 /* Main.storyboard in Resources */,
+				8AB1A0DA20A877320056E951 /* EmoticonWeibo.bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +479,7 @@
 				8A0252E120236ADF00994329 /* WSModelExample.m in Sources */,
 				8A21E6BE20751DEE00D00D93 /* WSImageCoder.m in Sources */,
 				8ACE9FB1206A9BA5007B9108 /* WSImageDisplayExample.m in Sources */,
+				8AB1A0DD20A8777B0056E951 /* WSFrameImage.m in Sources */,
 				8AAD97F6206F574900A1DD46 /* UIGestureRecognizer+WSAdd.m in Sources */,
 				8AAD97F3206F567C00A1DD46 /* WSImageExampleHelper.m in Sources */,
 				8ACE9FB5206A9D13007B9108 /* UIDevice+WSAdd.m in Sources */,
